@@ -117,7 +117,7 @@ const elizaWorkoutSchedule = [
       "Adductors - 10-12 reps",
       "Abductors - 10-12 reps",
     ],
-    cardio: ["Treadmill", "StairMaster"],
+    cardio: ["Treadmill", "StairMaster", "Elliptical", "Cycling"],
   },
   {
     day: "Day 2 (Monday)",
@@ -131,12 +131,12 @@ const elizaWorkoutSchedule = [
       "Lateral Raises - 10-12 reps",
       "Reverse Pec Deck - 10-12 reps",
     ],
-    cardio: ["Treadmill", "StairMaster"],
+    cardio: ["Treadmill", "StairMaster", "Elliptical", "Cycling"],
   },
   {
     day: "Day 3 (Tuesday)",
     type: "Cardio",
-    cardio: ["Treadmill", "StairMaster"],
+    cardio: ["Treadmill", "StairMaster", "Elliptical", "Cycling"],
   },
   {
     day: "Day 4 (Wednesday)",
@@ -149,7 +149,7 @@ const elizaWorkoutSchedule = [
       "Leg Raises - 10-12 reps",
       "Abs (crunches, leg raises) - 10-12 reps",
     ],
-    cardio: ["Treadmill", "StairMaster"],
+    cardio: ["Treadmill", "StairMaster", "Elliptical", "Cycling"],
   },
   {
     day: "Day 5 (Thursday)",
@@ -162,7 +162,7 @@ const elizaWorkoutSchedule = [
       "Rope Triceps Extension - 10-12 reps",
       "Triceps Bar Pushdown - 10-12 reps",
     ],
-    cardio: ["Treadmill", "StairMaster"],
+    cardio: ["Treadmill", "StairMaster", "Elliptical", "Cycling"],
   },
   {
     day: "Day 6 (Friday)",
@@ -175,12 +175,12 @@ const elizaWorkoutSchedule = [
       "Cable Kick Backs - 10-12 reps",
       "Abs - 10-12 reps",
     ],
-    cardio: ["Treadmill", "StairMaster"],
+    cardio: ["Treadmill", "StairMaster", "Elliptical", "Cycling"],
   },
   {
     day: "Day 7 (Saturday)",
     type: "Rest or Light Activity",
-    exercises: ["Rest or light cardio/stretching"],
+    cardio: ["Treadmill", "StairMaster", "Elliptical", "Cycling"],
   },
 ];
 
