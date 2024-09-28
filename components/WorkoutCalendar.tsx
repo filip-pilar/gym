@@ -18,7 +18,7 @@ interface WorkoutCalendarProps {
   onWeekChange: (startDate: string, endDate: string) => void;
 }
 
-export function WorkoutCalendar({ userId, workouts, onWeekChange }: WorkoutCalendarProps) {
+export function WorkoutCalendar({ workouts, onWeekChange }: WorkoutCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const onWeekChangeRef = useRef(onWeekChange);
 

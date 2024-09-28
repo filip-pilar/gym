@@ -73,29 +73,29 @@ export async function createOrUpdateWorkoutsTable() {
 }
 
 export async function logWorkout(formData: FormData) {
-    try {
-      await createOrUpdateWorkoutsTable();
-  
-      const userId = formData.get("user") as string;
-      const date = new Date(formData.get("date") as string);
-      const dateString = date.toISOString().split("T")[0]; // Convert to 'YYYY-MM-DD' format
-      const exercise = formData.get("exercise") as string;
-      const isCardio = formData.get("isCardio") === "true";
-  
-      let sets: number | null = null;
-      let weight: number | null = null;
-      let time: number | null = null;
-      let calories: number | null = null;
-  
-      if (isCardio) {
-        time = parseInt(formData.get("time") as string) || null;
-        calories = parseInt(formData.get("calories") as string) || null;
-      } else {
-        sets = parseInt(formData.get("sets") as string) || null;
-        weight = parseFloat(formData.get("weight") as string) || null;
-      }
-  
-      await sql`
+  try {
+    await createOrUpdateWorkoutsTable();
+
+    const userId = formData.get("user") as string;
+    const date = new Date(formData.get("date") as string);
+    const dateString = date.toISOString().split("T")[0]; // Convert to 'YYYY-MM-DD' format
+    const exercise = formData.get("exercise") as string;
+    const isCardio = formData.get("isCardio") === "true";
+
+    let sets: number | null = null;
+    let weight: number | null = null;
+    let time: number | null = null;
+    let calories: number | null = null;
+
+    if (isCardio) {
+      time = parseInt(formData.get("time") as string) || null;
+      calories = parseInt(formData.get("calories") as string) || null;
+    } else {
+      sets = parseInt(formData.get("sets") as string) || null;
+      weight = parseFloat(formData.get("weight") as string) || null;
+    }
+
+    await sql`
           INSERT INTO workouts (user_id, workout_date, exercise, sets, weight, time, calories, is_cardio)
           VALUES (${userId}, ${dateString}, ${exercise}, ${sets}, ${weight}, ${time}, ${calories}, ${isCardio})
           ON CONFLICT (user_id, workout_date, exercise) DO UPDATE
@@ -106,15 +106,15 @@ export async function logWorkout(formData: FormData) {
               is_cardio = EXCLUDED.is_cardio,
               created_at = CURRENT_TIMESTAMP;
         `;
-  
-      //console.log("Workout logged successfully");
-      revalidatePath("/");
-    } catch (error) {
-      console.error("Error logging workout:", error);
-      throw error;
-    }
+
+    //console.log("Workout logged successfully");
+    revalidatePath("/");
+  } catch (error) {
+    console.error("Error logging workout:", error);
+    throw error;
   }
-  
+}
+
 export async function fetchWorkouts(
   userId: string,
   startDate?: string,
@@ -127,7 +127,7 @@ export async function fetchWorkouts(
         SELECT * FROM workouts 
         WHERE user_id = $1
       `;
-    let params: any[] = [userId];
+    const params: any[] = [userId];
 
     if (startDate && endDate) {
       query += ` AND workout_date >= $2 AND workout_date <= $3`;
@@ -142,7 +142,7 @@ export async function fetchWorkouts(
 
     // Initialize all dates in the range
     if (startDate && endDate) {
-      let currentDate = new Date(startDate);
+      const currentDate = new Date(startDate);
       const end = new Date(endDate);
       while (currentDate <= end) {
         const dateStr = currentDate.toISOString().split("T")[0];

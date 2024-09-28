@@ -15,7 +15,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { fetchWorkouts, logWorkout } from "@/lib/actions";
 import { Loader2 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkoutCalendar } from "@/components/WorkoutCalendar";
 import { format, addDays, startOfWeek, parseISO } from "date-fns";
 
@@ -312,7 +312,7 @@ export default function WorkoutTracker() {
       console.log("selectedDate", selectedDate);
       await fetchWorkoutsForWeek();
     },
-    [fetchWorkoutsForWeek]
+    [fetchWorkoutsForWeek,selectedDate]
   );
 
   const currentDayWorkout = getCurrentWorkoutSchedule()[selectedDate.getDay()];
