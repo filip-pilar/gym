@@ -136,7 +136,7 @@ const elizaWorkoutSchedule = [
   {
     day: "Day 3 (Tuesday)",
     type: "Cardio",
-    exercises: ["Cardio of choice"],
+    cardio: ["Treadmill", "StairMaster"],
   },
   {
     day: "Day 4 (Wednesday)",
