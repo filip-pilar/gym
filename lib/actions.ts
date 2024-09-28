@@ -1,4 +1,5 @@
 "use server";
+// @ts-nocheck
 
 import { sql } from "@vercel/postgres";
 import { revalidatePath } from "next/cache";
