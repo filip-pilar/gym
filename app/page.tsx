@@ -23,7 +23,7 @@ import { format, addDays, startOfWeek, parseISO } from "date-fns";
 const philWorkoutSchedule = [
   {
     day: "Day 1",
-    type: "Push (Chest, Shoulders, Triceps)",
+    type: "Push",
     exercises: [
       "Chest Press Machine",
       "Incline Chest Press Machine",
@@ -36,12 +36,12 @@ const philWorkoutSchedule = [
   },
   {
     day: "Day 2",
-    type: "Pull (Back, Biceps, Rear Deltoids)",
+    type: "Pull",
     exercises: [
       "Lat Pulldown Machine",
       "Seated Cable Row Machine",
       "Chest-Supported Row Machine",
-      "Face Pull Machine",
+      "Rear Delt Fly",
       "Bicep Curl Machine",
       "Reverse Pec Deck Machine",
     ],
@@ -49,57 +49,51 @@ const philWorkoutSchedule = [
   },
   {
     day: "Day 3",
-    type: "Legs (Quadriceps, Hamstrings, Calves, Glutes)",
+    type: "Legs",
     exercises: [
       "Leg Press Machine",
       "Leg Extension Machine",
       "Leg Curl Machine",
       "Seated Calf Raise Machine",
-      "Standing Calf Raise Machine",
       "Hip Abduction Machine",
       "Hip Adduction Machine",
-      "Glute Kickback Machine",
     ],
     cardio: ["Treadmill", "StairMaster"],
   },
   {
     day: "Day 4",
-    type: "Push (Chest, Shoulders, Triceps)",
+    type: "Push",
     exercises: [
-      "Chest Press Machine",
-      "Incline Chest Press Machine",
-      "Seated Shoulder Press Machine",
-      "Lateral Raise Machine",
-      "Tricep Pushdown Machine",
-      "Dip Machine",
+      "Pec Deck Machine (Chest Fly)",
+      "Machine Shoulder Press",
+      "Lateral Raise",
+      "Assisted Dip Machine",
+      "Close-Grip Chest Press Machine",
     ],
     cardio: ["Treadmill", "StairMaster"],
   },
   {
     day: "Day 5",
-    type: "Pull (Back, Biceps, Rear Deltoids)",
+    type: "Pull",
     exercises: [
-      "Lat Pulldown Machine",
-      "Seated Cable Row Machine",
-      "Chest-Supported Row Machine",
-      "Face Pull Machine",
-      "Bicep Curl Machine",
-      "Reverse Pec Deck Machine",
+      "Assisted Pull-Up Machine",
+      "Row Machine",
+      "Lat Pulldown",
+      "Preacher Curl Machine",
+      "Reverse Grip Bicep Curl Machine",
     ],
     cardio: ["Treadmill", "StairMaster"],
   },
   {
     day: "Day 6",
-    type: "Legs (Quadriceps, Hamstrings, Calves, Glutes)",
+    type: "Legs",
     exercises: [
+      "Hack Squat Machine",
       "Leg Press Machine",
-      "Leg Extension Machine",
       "Leg Curl Machine",
       "Seated Calf Raise Machine",
-      "Standing Calf Raise Machine",
-      "Hip Abduction Machine",
-      "Hip Adduction Machine",
-      "Glute Kickback Machine",
+      "Adductor Machine",
+      "Abductor Machine",
     ],
     cardio: ["Treadmill", "StairMaster"],
   },
@@ -113,91 +107,80 @@ const philWorkoutSchedule = [
 // Eliza's workout schedule
 const elizaWorkoutSchedule = [
   {
-    day: "Day 1",
-    type: "Push (Chest, Shoulders, Triceps)",
+    day: "Day 1 (Sunday)",
+    type: "Glutes and Hamstrings",
     exercises: [
-      "Chest Press Machine",
-      "Incline Chest Press Machine",
-      "Seated Shoulder Press Machine",
-      "Lateral Raise Machine",
-      "Tricep Pushdown Machine",
-      "Dip Machine",
+      "Seated Leg Curl - 10-12 reps",
+      "RDL - 10-12 reps",
+      "Hip Thrust Machine - 10-12 reps",
+      "Glute Seat - 10-12 reps",
+      "Adductors - 10-12 reps",
+      "Abductors - 10-12 reps",
     ],
     cardio: ["Treadmill", "StairMaster"],
   },
   {
-    day: "Day 2",
-    type: "Pull (Back, Biceps, Rear Deltoids)",
+    day: "Day 2 (Monday)",
+    type: "Upper Body (Pull Focus)",
     exercises: [
-      "Lat Pulldown Machine",
-      "Seated Cable Row Machine",
-      "Chest-Supported Row Machine",
-      "Face Pull Machine",
-      "Bicep Curl Machine",
-      "Reverse Pec Deck Machine",
+      "Pull Ups - 3-4 reps",
+      "Lat Pull Down - 10-12 reps",
+      "Seated Row - 10-12 reps",
+      "Pec Fly - 10-12 reps",
+      "Shoulder Press - 10-12 reps",
+      "Lateral Raises - 10-12 reps",
+      "Reverse Pec Deck - 10-12 reps",
     ],
     cardio: ["Treadmill", "StairMaster"],
   },
   {
-    day: "Day 3",
-    type: "Legs (Quadriceps, Hamstrings, Calves, Glutes)",
-    exercises: [
-      "Leg Press Machine",
-      "Leg Extension Machine",
-      "Leg Curl Machine",
-      "Seated Calf Raise Machine",
-      "Standing Calf Raise Machine",
-      "Hip Abduction Machine",
-      "Hip Adduction Machine",
-      "Glute Kickback Machine",
-    ],
-    cardio: ["Treadmill", "StairMaster"],
-  },
-  {
-    day: "Day 4",
-    type: "Push (Chest, Shoulders, Triceps)",
-    exercises: [
-      "Chest Press Machine",
-      "Incline Chest Press Machine",
-      "Seated Shoulder Press Machine",
-      "Lateral Raise Machine",
-      "Tricep Pushdown Machine",
-      "Dip Machine",
-    ],
-    cardio: ["Treadmill", "StairMaster"],
-  },
-  {
-    day: "Day 5",
-    type: "Pull (Back, Biceps, Rear Deltoids)",
-    exercises: [
-      "Lat Pulldown Machine",
-      "Seated Cable Row Machine",
-      "Chest-Supported Row Machine",
-      "Face Pull Machine",
-      "Bicep Curl Machine",
-      "Reverse Pec Deck Machine",
-    ],
-    cardio: ["Treadmill", "StairMaster"],
-  },
-  {
-    day: "Day 6",
-    type: "Legs (Quadriceps, Hamstrings, Calves, Glutes)",
-    exercises: [
-      "Leg Press Machine",
-      "Leg Extension Machine",
-      "Leg Curl Machine",
-      "Seated Calf Raise Machine",
-      "Standing Calf Raise Machine",
-      "Hip Abduction Machine",
-      "Hip Adduction Machine",
-      "Glute Kickback Machine",
-    ],
-    cardio: ["Treadmill", "StairMaster"],
-  },
-  {
-    day: "Day 7",
+    day: "Day 3 (Tuesday)",
     type: "Cardio",
-    exercises: ["Treadmill", "StairMaster"],
+    exercises: ["Cardio of choice"],
+  },
+  {
+    day: "Day 4 (Wednesday)",
+    type: "Quads and Abs",
+    exercises: [
+      "Leg Extensions - 10-12 reps",
+      "Leg Press - 10-12 reps",
+      "Belt Squats - 10-12 reps",
+      "Bulgarian Split Squat - 10-12 reps",
+      "Leg Raises - 10-12 reps",
+      "Abs (crunches, leg raises) - 10-12 reps",
+    ],
+    cardio: ["Treadmill", "StairMaster"],
+  },
+  {
+    day: "Day 5 (Thursday)",
+    type: "Upper Body (Push Focus)",
+    exercises: [
+      "Assisted Pull-ups - 8-10 reps",
+      "Barbell Row - 10-12 reps",
+      "Dumbbell Biceps Curl - 10-12 reps",
+      "Rope Hammer Curl - 10-12 reps",
+      "Rope Triceps Extension - 10-12 reps",
+      "Triceps Bar Pushdown - 10-12 reps",
+    ],
+    cardio: ["Treadmill", "StairMaster"],
+  },
+  {
+    day: "Day 6 (Friday)",
+    type: "Glutes and Hamstrings",
+    exercises: [
+      "Adductors - 10-12 reps",
+      "Lying Leg Curls - 10-12 reps",
+      "Sumo Squats - 10-12 reps",
+      "Good Mornings - 10-12 reps",
+      "Cable Kick Backs - 10-12 reps",
+      "Abs - 10-12 reps",
+    ],
+    cardio: ["Treadmill", "StairMaster"],
+  },
+  {
+    day: "Day 7 (Saturday)",
+    type: "Rest or Light Activity",
+    exercises: ["Rest or light cardio/stretching"],
   },
 ];
 
@@ -312,7 +295,7 @@ export default function WorkoutTracker() {
       console.log("selectedDate", selectedDate);
       await fetchWorkoutsForWeek();
     },
-    [fetchWorkoutsForWeek,selectedDate]
+    [fetchWorkoutsForWeek, selectedDate]
   );
 
   const currentDayWorkout = getCurrentWorkoutSchedule()[selectedDate.getDay()];
@@ -321,7 +304,7 @@ export default function WorkoutTracker() {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">7-Day Workout Tracker</h1>
+      <h1 className="text-3xl font-bold mb-6">Progress Tracker</h1>
       <Tabs
         defaultValue="phil"
         onValueChange={(value) => {
