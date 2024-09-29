@@ -23,7 +23,12 @@ import { Loader2 } from "lucide-react";
 import { format, addDays, startOfWeek, endOfWeek } from "date-fns";
 import { WorkoutCalendar } from "@/components/WorkoutCalendar";
 import { elizaWorkoutSchedule, philWorkoutSchedule } from "@/lib/workoutPlans";
-import { fetchExercises, fetchLastWorkout, logWorkout, overwriteWorkout } from "@/lib/actions";
+import {
+  fetchExercises,
+  fetchLastWorkout,
+  logWorkout,
+  overwriteWorkout,
+} from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 
 export default function WorkoutTracker() {
@@ -33,7 +38,9 @@ export default function WorkoutTracker() {
   const [selectedExercise, setSelectedExercise] = useState("");
   const [isCardio, setIsCardio] = useState(false);
   const [selectedSets, setSelectedSets] = useState<3 | 4 | null>(null);
-  const [selectedReps, setSelectedReps] = useState<"6-8" | "10-12" | null>(null);
+  const [selectedReps, setSelectedReps] = useState<"6-8" | "10-12" | null>(
+    null
+  );
   const [weight, setWeight] = useState<string>("");
   const [time, setTime] = useState<string>("");
   const [calories, setCalories] = useState<string>("");
@@ -44,7 +51,6 @@ export default function WorkoutTracker() {
     startOfWeek(new Date(), { weekStartsOn: 0 })
   );
   const [isWorkoutsLoading, setIsWorkoutsLoading] = useState(false);
-  const [lastWorkout, setLastWorkout] = useState<any>(null);
 
   const getCurrentWorkoutSchedule = useMemo(
     () => (currentUser === "phil" ? philWorkoutSchedule : elizaWorkoutSchedule),
@@ -57,11 +63,8 @@ export default function WorkoutTracker() {
   const currentDayCardio = currentDayWorkout.cardio;
 
   const weekStartDate = startOfWeek(selectedDate, { weekStartsOn: 0 });
-  const weekEndDate = endOfWeek(selectedDate, { weekStartsOn: 0 });
 
-  const fetchedRef = useRef(false);
-
-  const handleWeekChange = useCallback((start: string, end: string) => {
+  const handleWeekChange = useCallback((start: string) => {
     const newStartDate = new Date(start);
     setSelectedDate(newStartDate);
     setCurrentWeekStart(startOfWeek(newStartDate, { weekStartsOn: 0 }));
@@ -119,7 +122,6 @@ export default function WorkoutTracker() {
         try {
           const result = await fetchLastWorkout(currentUser, selectedExercise);
           if (result.success && result.workout) {
-            setLastWorkout(result.workout);
             if (!result.workout.is_cardio) {
               setSelectedSets(result.workout.sets);
               setSelectedReps(result.workout.reps);
@@ -129,7 +131,6 @@ export default function WorkoutTracker() {
               setCalories(result.workout.calories.toString());
             }
           } else {
-            setLastWorkout(null);
             resetForm();
           }
         } catch (error) {
@@ -309,8 +310,8 @@ export default function WorkoutTracker() {
         </div>
       </div>
 
-     {/* Exercise selection buttons */}
-     <div>
+      {/* Exercise selection buttons */}
+      <div>
         <Label className="mb-2 block">Select Exercise</Label>
         {renderExerciseButtons(currentDayExercises, false)}
       </div>

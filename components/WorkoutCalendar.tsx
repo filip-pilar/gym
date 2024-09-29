@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameWeek, parseISO, isEqual } from "date-fns";
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameWeek} from "date-fns";
 import { Loader2 } from "lucide-react";
 
 export function WorkoutCalendar({ userId, workouts, onWeekChange, isLoading }: WorkoutCalendarProps) {
