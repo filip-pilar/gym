@@ -102,7 +102,7 @@ export const elizaWorkoutSchedule = [
     day: "Day 2 (Monday)",
     type: "Upper Body (Pull Focus)",
     exercises: [
-      "Pull Ups - 3-4 reps",
+      "Pull Ups",
       "Lat Pull Down",
       "Seated Row",
       "Pec Fly",
@@ -134,7 +134,7 @@ export const elizaWorkoutSchedule = [
     day: "Day 5 (Thursday)",
     type: "Upper Body (Push Focus)",
     exercises: [
-      "Assisted Pull-ups - 8-10 reps",
+      "Assisted Pull-ups",
       "Barbell Row",
       "Dumbbell Biceps Curl",
       "Rope Hammer Curl",

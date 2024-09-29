@@ -13,6 +13,13 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { format, addDays, startOfWeek, endOfWeek, isSameDay } from "date-fns";
 import { WorkoutCalendar } from "@/components/WorkoutCalendar";
@@ -36,7 +43,9 @@ export default function WorkoutTracker() {
   const [selectedExercise, setSelectedExercise] = useState("");
   const [isCardio, setIsCardio] = useState(false);
   const [selectedSets, setSelectedSets] = useState<3 | 4 | null>(null);
-  const [selectedReps, setSelectedReps] = useState<"6-8" | "10-12" | null>(null);
+  const [selectedReps, setSelectedReps] = useState<"6-8" | "10-12" | null>(
+    null
+  );
   const [weight, setWeight] = useState<string>("");
   const [time, setTime] = useState<string>("");
   const [calories, setCalories] = useState<string>("");
@@ -48,16 +57,19 @@ export default function WorkoutTracker() {
     return startOfWeek(today, { weekStartsOn: 0 });
   });
   const [isWorkoutsLoading, setIsWorkoutsLoading] = useState(false);
+  const [selectedDaySchedule, setSelectedDaySchedule] = useState<string>("");
 
   const getCurrentWorkoutSchedule = useMemo(
     () => (currentUser === "phil" ? philWorkoutSchedule : elizaWorkoutSchedule),
     [currentUser]
   );
 
-  const currentDayWorkout =
-    getCurrentWorkoutSchedule[selectedDate.getDay() as keyof WorkoutSchedule];
-  const currentDayExercises = currentDayWorkout.exercises;
-  const currentDayCardio = currentDayWorkout.cardio;
+  const currentDayWorkout = useMemo(() => {
+    if (selectedDaySchedule) {
+      return getCurrentWorkoutSchedule.find(day => day.day.toString() === selectedDaySchedule) || { exercises: [], cardio: [] };
+    }
+    return getCurrentWorkoutSchedule[selectedDate.getDay()] || { exercises: [], cardio: [] };
+  }, [getCurrentWorkoutSchedule, selectedDate, selectedDaySchedule]);
 
   const handleWeekChange = useCallback((start: string) => {
     const newStartDate = new Date(start);
@@ -272,49 +284,75 @@ export default function WorkoutTracker() {
     }
   };
 
+  const handleDayClick = (date: Date) => {
+    setSelectedDate(date);
+    setIsCardio(false);
+    setSelectedExercise("");
+    setSelectedSets(null);
+    setSelectedReps(null);
+    setSelectedDaySchedule("");
+  };
+
+  const handleDayScheduleChange = (value: string) => {
+    setSelectedDaySchedule(value);
+    setSelectedExercise("");
+    setIsCardio(false);
+    resetForm();
+  };
+
   const renderWorkoutForm = () => (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Day selection buttons */}
       <div>
         <Label className="mb-2 block">Select Day</Label>
         <div className="grid grid-cols-7 gap-2">
-          {Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i)).map(
-            (date) => (
-              <Button
-                key={format(date, "yyyy-MM-dd")}
-                type="button"
-                variant={
-                  isSameDay(selectedDate, date)
-                    ? "default"
-                    : "outline"
-                }
-                onClick={() => {
-                  setSelectedDate(date);
-                  setIsCardio(false);
-                  setSelectedExercise("");
-                  setSelectedSets(null);
-                  setSelectedReps(null);
-                }}
-                className="flex flex-col items-center p-2 h-auto"
-              >
-                <span className="text-xs">{format(date, "EEE")}</span>
-                <span className="text-lg font-bold">{format(date, "d")}</span>
-              </Button>
-            )
-          )}
+          {Array.from({ length: 7 }, (_, i) =>
+            addDays(currentWeekStart, i)
+          ).map((date) => (
+            <Button
+              key={format(date, "yyyy-MM-dd")}
+              type="button"
+              variant={isSameDay(selectedDate, date) ? "default" : "outline"}
+              onClick={() => handleDayClick(date)}
+              className="flex flex-col items-center p-2 h-auto"
+            >
+              <span className="text-xs">{format(date, "EEE")}</span>
+              <span className="text-lg font-bold">{format(date, "d")}</span>
+            </Button>
+          ))}
         </div>
       </div>
 
       {/* Exercise selection buttons */}
       <div>
         <Label className="mb-2 block">Select Exercise</Label>
-        {renderExerciseButtons(currentDayExercises, false)}
+        {renderExerciseButtons(currentDayWorkout.exercises, false)}
       </div>
 
       {/* Cardio selection buttons */}
       <div>
         <Label className="mb-2 block">Cardio</Label>
-        {renderExerciseButtons(currentDayCardio, true)}
+        {renderExerciseButtons(currentDayWorkout.cardio, true)}
+      </div>
+
+      {/* Day overwrite selection */}
+      <div className="space-y-2">
+        <Label htmlFor="daySchedule">Overwrite Workout Day (Optional)</Label>
+        <Select
+          onValueChange={handleDayScheduleChange}
+          value={selectedDaySchedule}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select workout day to overwrite" />
+          </SelectTrigger>
+          <SelectContent>
+            {getCurrentWorkoutSchedule.map((day) => (
+              <SelectItem key={day.day} value={day.day.toString()}>
+                {day.day} - {day.type}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {selectedExercise && (
