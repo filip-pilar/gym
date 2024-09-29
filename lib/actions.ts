@@ -3,178 +3,109 @@
 import { sql } from "@vercel/postgres";
 import { revalidatePath } from "next/cache";
 
-export async function createOrUpdateWorkoutsTable() {
-  try {
-    // First, check if the table exists
-    const { rows } = await sql`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_name = 'workouts'
-      );
-    `;
-
-    const tableExists = rows[0].exists;
-
-    if (!tableExists) {
-      // If the table doesn't exist, create it with the new structure
-      await sql`
-        CREATE TABLE workouts (
-          id SERIAL PRIMARY KEY,
-          user_id VARCHAR(255) NOT NULL,
-          workout_date DATE NOT NULL,
-          exercise VARCHAR(255) NOT NULL,
-          sets INT,
-          weight FLOAT,
-          time INT,
-          calories INT,
-          is_cardio BOOLEAN DEFAULT false,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-      `;
-    } else {
-      // If the table exists, check if the workout_date column exists
-      const { rows: columnCheck } = await sql`
-        SELECT EXISTS (
-          SELECT FROM information_schema.columns 
-          WHERE table_name = 'workouts' AND column_name = 'workout_date'
-        );
-      `;
-
-      const workoutDateExists = columnCheck[0].exists;
-
-      if (!workoutDateExists) {
-        // If workout_date doesn't exist, it means we have the old 'date' column
-        // Rename 'date' to 'workout_date'
-        await sql`ALTER TABLE workouts ADD COLUMN workout_date DATE NOT NULL DEFAULT CURRENT_DATE;`;
-        //await sql`ALTER TABLE workouts RENAME COLUMN date TO workout_date;`;
-      }
-    }
-
-    // Ensure the unique constraint exists
-    await sql`
-      DO $$ 
-      BEGIN 
-        IF NOT EXISTS (
-          SELECT 1 
-          FROM pg_constraint 
-          WHERE conname = 'workouts_user_date_exercise_key'
-        ) THEN
-          ALTER TABLE workouts
-          ADD CONSTRAINT workouts_user_date_exercise_key UNIQUE (user_id, workout_date, exercise);
-        END IF;
-      END $$;
-    `;
-
-    //console.log("Workouts table created or updated successfully");
-  } catch (error) {
-    console.error("Error creating or updating workouts table:", error);
-    throw error;
-  }
-}
-
-export async function logWorkout(formData: FormData) {
-  try {
-    await createOrUpdateWorkoutsTable();
-
-    const userId = formData.get("user") as string;
-    const date = new Date(formData.get("date") as string);
-    const dateString = date.toISOString().split("T")[0]; // Convert to 'YYYY-MM-DD' format
-    const exercise = formData.get("exercise") as string;
-    const isCardio = formData.get("isCardio") === "true";
-
-    let sets: number | null = null;
-    let weight: number | null = null;
-    let time: number | null = null;
-    let calories: number | null = null;
-
-    if (isCardio) {
-      time = parseInt(formData.get("time") as string) || null;
-      calories = parseInt(formData.get("calories") as string) || null;
-    } else {
-      sets = parseInt(formData.get("sets") as string) || null;
-      weight = parseFloat(formData.get("weight") as string) || null;
-    }
-
-    await sql`
-          INSERT INTO workouts (user_id, workout_date, exercise, sets, weight, time, calories, is_cardio)
-          VALUES (${userId}, ${dateString}, ${exercise}, ${sets}, ${weight}, ${time}, ${calories}, ${isCardio})
-          ON CONFLICT (user_id, workout_date, exercise) DO UPDATE
-          SET sets = EXCLUDED.sets,
-              weight = EXCLUDED.weight,
-              time = EXCLUDED.time,
-              calories = EXCLUDED.calories,
-              is_cardio = EXCLUDED.is_cardio,
-              created_at = CURRENT_TIMESTAMP;
-        `;
-
-    //console.log("Workout logged successfully");
-    revalidatePath("/");
-  } catch (error) {
-    console.error("Error logging workout:", error);
-    throw error;
-  }
-}
-
-export async function fetchWorkouts(
+export async function logWorkout(
   userId: string,
-  startDate?: string,
-  endDate?: string
+  date: string,
+  exercise: string,
+  isCardio: boolean,
+  sets: number | null,
+  reps: string | null,
+  weight: number | null,
+  time: number | null,
+  calories: number | null
 ) {
   try {
-    await createOrUpdateWorkoutsTable();
+    // Check if a workout already exists for this user and date
+    const existingWorkout = await sql`
+      SELECT * FROM workouts
+      WHERE user_id = ${userId} AND date = ${date} AND exercise = ${exercise}
+    `;
 
-    let query = `
-        SELECT * FROM workouts 
-        WHERE user_id = $1
-      `;
-    const params: any[] = [userId];
-
-    if (startDate && endDate) {
-      query += ` AND workout_date >= $2 AND workout_date <= $3`;
-      params.push(startDate, endDate);
+    if (existingWorkout.rows.length > 0) {
+      return {
+        success: false,
+        message: "Workout already logged for this day",
+        existingWorkout: existingWorkout.rows[0],
+      };
     }
 
-    query += ` ORDER BY workout_date ASC, created_at DESC`;
+    // Insert the new workout
+    await sql`
+      INSERT INTO workouts (user_id, date, exercise, is_cardio, sets, reps, weight, time, calories)
+      VALUES (${userId}, ${date}, ${exercise}, ${isCardio}, ${sets}, ${reps}, ${weight}, ${time}, ${calories})
+    `;
 
-    const { rows } = await sql.query(query, params);
-
-    const workoutsByDay: Record<string, any[]> = {};
-
-    // Initialize all dates in the range
-    if (startDate && endDate) {
-      const currentDate = new Date(startDate);
-      const end = new Date(endDate);
-      while (currentDate <= end) {
-        const dateStr = currentDate.toISOString().split("T")[0];
-        workoutsByDay[dateStr] = [];
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-    }
-
-    // Populate with actual workouts
-    rows.forEach((workout) => {
-      const dateStr = workout.workout_date.toISOString().split("T")[0];
-      if (!workoutsByDay[dateStr]) workoutsByDay[dateStr] = [];
-
-      const formattedWorkout = workout.is_cardio
-        ? {
-            exercise: workout.exercise,
-            time: workout.time,
-            calories: workout.calories,
-          }
-        : {
-            exercise: workout.exercise,
-            sets: workout.sets,
-            weight: workout.weight,
-          };
-
-      workoutsByDay[dateStr].push(formattedWorkout);
-    });
-
-    //console.log("workoutsByDay:", workoutsByDay);
-    return workoutsByDay;
+    revalidatePath("/workout-tracker");
+    return { success: true, message: "Workout logged successfully" };
   } catch (error) {
-    console.error("Error fetching workouts:", error);
-    return {};
+    console.error("Failed to log workout:", error);
+    return { success: false, message: "Failed to log workout" };
+  }
+}
+
+export async function overwriteWorkout(
+  workoutId: number,
+  sets: number | null,
+  reps: string | null,
+  weight: number | null,
+  time: number | null,
+  calories: number | null
+) {
+  try {
+    await sql`
+      UPDATE workouts
+      SET sets = ${sets}, reps = ${reps}, weight = ${weight}, time = ${time}, calories = ${calories}
+      WHERE id = ${workoutId}
+    `;
+
+    revalidatePath("/workout-tracker");
+    return { success: true, message: "Workout updated successfully" };
+  } catch (error) {
+    console.error("Failed to update workout:", error);
+    return { success: false, message: "Failed to update workout" };
+  }
+}
+
+export async function fetchExercises(
+  userId: string,
+  startDate: string,
+  endDate: string
+) {
+  try {
+    const exercises = await sql`
+        SELECT * FROM workouts
+        WHERE user_id = ${userId}
+          AND date >= ${startDate}
+          AND date <= ${endDate}
+        ORDER BY date ASC, exercise ASC
+      `;
+
+    return { success: true, exercises: exercises.rows };
+  } catch (error) {
+    console.error("Failed to fetch exercises:", error);
+    return { success: false, message: "Failed to fetch exercises" };
+  }
+}
+
+export async function fetchLastWorkout(userId: string, exerciseName: string) {
+  try {
+    const lastWorkout = await sql`
+        SELECT * FROM workouts
+        WHERE user_id = ${userId} AND exercise = ${exerciseName}
+        ORDER BY date DESC
+        LIMIT 1
+      `;
+
+    if (lastWorkout.rows.length > 0) {
+      return { success: true, workout: lastWorkout.rows[0] };
+    } else {
+      return {
+        success: false,
+        message: "No previous workout found for this exercise",
+      };
+    }
+  } catch (error) {
+    console.error("Failed to fetch last workout:", error);
+    return { success: false, message: "Failed to fetch last workout data" };
   }
 }

@@ -1,6 +1,11 @@
 "use client";
-
-import { useState, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,305 +17,411 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { fetchWorkouts, logWorkout } from "@/lib/actions";
-import { Loader2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2 } from "lucide-react";
+
+import { format, addDays, startOfWeek, endOfWeek } from "date-fns";
 import { WorkoutCalendar } from "@/components/WorkoutCalendar";
-import { format, addDays, startOfWeek, parseISO } from "date-fns";
-
-// Phil's workout schedule
-const philWorkoutSchedule = [
-  {
-    day: "Day 1",
-    type: "Push",
-    exercises: [
-      "Chest Press Machine",
-      "Incline Chest Press Machine",
-      "Seated Shoulder Press Machine",
-      "Lateral Raise Machine",
-      "Tricep Pushdown Machine",
-      "Dip Machine",
-    ],
-    cardio: ["Treadmill", "StairMaster"],
-  },
-  {
-    day: "Day 2",
-    type: "Pull",
-    exercises: [
-      "Lat Pulldown Machine",
-      "Seated Cable Row Machine",
-      "Chest-Supported Row Machine",
-      "Rear Delt Fly",
-      "Bicep Curl Machine",
-      "Reverse Pec Deck Machine",
-    ],
-    cardio: ["Treadmill", "StairMaster"],
-  },
-  {
-    day: "Day 3",
-    type: "Legs",
-    exercises: [
-      "Leg Press Machine",
-      "Leg Extension Machine",
-      "Leg Curl Machine",
-      "Seated Calf Raise Machine",
-      "Hip Abduction Machine",
-      "Hip Adduction Machine",
-    ],
-    cardio: ["Treadmill", "StairMaster"],
-  },
-  {
-    day: "Day 4",
-    type: "Push",
-    exercises: [
-      "Pec Deck Machine (Chest Fly)",
-      "Machine Shoulder Press",
-      "Lateral Raise",
-      "Assisted Dip Machine",
-      "Close-Grip Chest Press Machine",
-    ],
-    cardio: ["Treadmill", "StairMaster"],
-  },
-  {
-    day: "Day 5",
-    type: "Pull",
-    exercises: [
-      "Assisted Pull-Up Machine",
-      "Row Machine",
-      "Lat Pulldown",
-      "Preacher Curl Machine",
-      "Reverse Grip Bicep Curl Machine",
-    ],
-    cardio: ["Treadmill", "StairMaster"],
-  },
-  {
-    day: "Day 6",
-    type: "Legs",
-    exercises: [
-      "Hack Squat Machine",
-      "Leg Press Machine",
-      "Leg Curl Machine",
-      "Seated Calf Raise Machine",
-      "Adductor Machine",
-      "Abductor Machine",
-    ],
-    cardio: ["Treadmill", "StairMaster"],
-  },
-  {
-    day: "Day 7",
-    type: "Cardio",
-    exercises: ["Treadmill", "StairMaster"],
-  },
-];
-
-// Eliza's workout schedule
-const elizaWorkoutSchedule = [
-  {
-    day: "Day 1 (Sunday)",
-    type: "Glutes and Hamstrings",
-    exercises: [
-      "Seated Leg Curl",
-      "RDL",
-      "Hip Thrust Machine",
-      "Glute Seat",
-      "Adductors",
-      "Abductors",
-    ],
-    cardio: ["Treadmill", "StairMaster", "Elliptical", "Cycling"],
-  },
-  {
-    day: "Day 2 (Monday)",
-    type: "Upper Body (Pull Focus)",
-    exercises: [
-      "Pull Ups - 3-4 reps",
-      "Lat Pull Down",
-      "Seated Row",
-      "Pec Fly",
-      "Shoulder Press",
-      "Lateral Raises",
-      "Reverse Pec Deck",
-    ],
-    cardio: ["Treadmill", "StairMaster", "Elliptical", "Cycling"],
-  },
-  {
-    day: "Day 3 (Tuesday)",
-    type: "Cardio",
-    cardio: ["Treadmill", "StairMaster", "Elliptical", "Cycling"],
-  },
-  {
-    day: "Day 4 (Wednesday)",
-    type: "Quads and Abs",
-    exercises: [
-      "Leg Extensions",
-      "Leg Press",
-      "Belt Squats",
-      "Bulgarian Split Squat",
-      "Leg Raises",
-      "Abs (crunches, leg raises)",
-    ],
-    cardio: ["Treadmill", "StairMaster", "Elliptical", "Cycling"],
-  },
-  {
-    day: "Day 5 (Thursday)",
-    type: "Upper Body (Push Focus)",
-    exercises: [
-      "Assisted Pull-ups - 8-10 reps",
-      "Barbell Row",
-      "Dumbbell Biceps Curl",
-      "Rope Hammer Curl",
-      "Rope Triceps Extension",
-      "Triceps Bar Pushdown",
-    ],
-    cardio: ["Treadmill", "StairMaster", "Elliptical", "Cycling"],
-  },
-  {
-    day: "Day 6 (Friday)",
-    type: "Glutes and Hamstrings",
-    exercises: [
-      "Adductors",
-      "Lying Leg Curls",
-      "Sumo Squats",
-      "Good Mornings",
-      "Cable Kick Backs",
-      "Abs",
-    ],
-    cardio: ["Treadmill", "StairMaster", "Elliptical", "Cycling"],
-  },
-  {
-    day: "Day 7 (Saturday)",
-    type: "Rest or Light Activity",
-    cardio: ["Treadmill", "StairMaster", "Elliptical", "Cycling"],
-  },
-];
-
-interface Workout {
-  date: string;
-  exercise: string;
-  time?: number;
-  calories?: number;
-  sets?: number;
-  weight?: number;
-}
-
-interface CompletedWorkouts {
-  [key: string]: Workout[];
-}
+import { elizaWorkoutSchedule, philWorkoutSchedule } from "@/lib/workoutPlans";
+import { fetchExercises, fetchLastWorkout, logWorkout, overwriteWorkout } from "@/lib/actions";
+import { useToast } from "@/hooks/use-toast";
 
 export default function WorkoutTracker() {
   const [currentUser, setCurrentUser] = useState<"phil" | "eliza">("phil");
-  const [completedWorkouts, setCompletedWorkouts] = useState<CompletedWorkouts>(
-    {}
-  );
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [weekStartDate, setWeekStartDate] = useState<Date>(
+  const [view, setView] = useState<"log" | "calendar">("log");
+  const [selectedExercise, setSelectedExercise] = useState("");
+  const [isCardio, setIsCardio] = useState(false);
+  const [selectedSets, setSelectedSets] = useState<3 | 4 | null>(null);
+  const [selectedReps, setSelectedReps] = useState<"6-8" | "10-12" | null>(null);
+  const [weight, setWeight] = useState<string>("");
+  const [time, setTime] = useState<string>("");
+  const [calories, setCalories] = useState<string>("");
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [workouts, setWorkouts] = useState<CompletedWorkouts>({});
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(
     startOfWeek(new Date(), { weekStartsOn: 0 })
   );
-  const [selectedExercise, setSelectedExercise] = useState("");
-  const [selectedSets, setSelectedSets] = useState(3);
-  const [weightInput, setWeightInput] = useState("");
-  const [timeInput, setTimeInput] = useState("");
-  const [caloriesInput, setCaloriesInput] = useState("");
-  const [isCardio, setIsCardio] = useState(false);
-  const [isFetchingWorkouts, setIsFetchingWorkouts] = useState(false);
-  const [isLoggingWorkout, setIsLoggingWorkout] = useState(false);
-  const [view, setView] = useState<"log" | "calendar">("log");
-  const { toast } = useToast();
+  const [isWorkoutsLoading, setIsWorkoutsLoading] = useState(false);
+  const [lastWorkout, setLastWorkout] = useState<any>(null);
 
-  // Function to get the current workout schedule based on the selected user
-  const getCurrentWorkoutSchedule = useCallback(() => {
-    return currentUser === "phil" ? philWorkoutSchedule : elizaWorkoutSchedule;
-  }, [currentUser]);
+  const getCurrentWorkoutSchedule = useMemo(
+    () => (currentUser === "phil" ? philWorkoutSchedule : elizaWorkoutSchedule),
+    [currentUser]
+  );
 
-  const fetchWorkoutsForWeek = useCallback(async () => {
-    setIsFetchingWorkouts(true);
-    try {
-      const fetchedWorkouts = await fetchWorkouts(
-        currentUser,
-        format(weekStartDate, "yyyy-MM-dd"),
-        format(addDays(weekStartDate, 6), "yyyy-MM-dd")
-      );
-      setCompletedWorkouts(fetchedWorkouts);
-    } catch (error) {
-      console.error("Failed to fetch workouts:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch workouts. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsFetchingWorkouts(false);
-    }
-  }, [currentUser, weekStartDate, toast]);
+  const currentDayWorkout =
+    getCurrentWorkoutSchedule[selectedDate.getDay() as keyof WorkoutSchedule];
+  const currentDayExercises = currentDayWorkout.exercises;
+  const currentDayCardio = currentDayWorkout.cardio;
+
+  const weekStartDate = startOfWeek(selectedDate, { weekStartsOn: 0 });
+  const weekEndDate = endOfWeek(selectedDate, { weekStartsOn: 0 });
+
+  const fetchedRef = useRef(false);
+
+  const handleWeekChange = useCallback((start: string, end: string) => {
+    const newStartDate = new Date(start);
+    setSelectedDate(newStartDate);
+    setCurrentWeekStart(startOfWeek(newStartDate, { weekStartsOn: 0 }));
+  }, []);
 
   useEffect(() => {
+    const fetchWorkoutsForWeek = async () => {
+      setIsWorkoutsLoading(true);
+      const weekStartDate = startOfWeek(currentWeekStart, { weekStartsOn: 0 });
+      const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 0 });
+      const startDateStr = format(weekStartDate, "yyyy-MM-dd");
+      const endDateStr = format(weekEndDate, "yyyy-MM-dd");
+
+      try {
+        const result = await fetchExercises(
+          currentUser,
+          startDateStr,
+          endDateStr
+        );
+        if (result.success && result.exercises) {
+          const workoutsByDate = result.exercises.reduce((acc, workout) => {
+            const date = workout.date;
+            if (!acc[date]) acc[date] = [];
+            acc[date].push(workout);
+            return acc;
+          }, {} as CompletedWorkouts);
+
+          setWorkouts(workoutsByDate);
+        } else {
+          console.error("Failed to fetch workouts:", result.message);
+          toast({
+            title: "Error",
+            description: "Failed to fetch workouts. Please try again.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching workouts:", error);
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsWorkoutsLoading(false);
+      }
+    };
+
     fetchWorkoutsForWeek();
-  }, [fetchWorkoutsForWeek]);
+  }, [currentUser, currentWeekStart, toast]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    const fetchLastWorkoutData = async () => {
+      if (selectedExercise) {
+        try {
+          const result = await fetchLastWorkout(currentUser, selectedExercise);
+          if (result.success && result.workout) {
+            setLastWorkout(result.workout);
+            if (!result.workout.is_cardio) {
+              setSelectedSets(result.workout.sets);
+              setSelectedReps(result.workout.reps);
+              setWeight(result.workout.weight.toString());
+            } else {
+              setTime(result.workout.time.toString());
+              setCalories(result.workout.calories.toString());
+            }
+          } else {
+            setLastWorkout(null);
+            resetForm();
+          }
+        } catch (error) {
+          console.error("Error fetching last workout:", error);
+          toast({
+            title: "Error",
+            description: "Failed to fetch last workout data. Please try again.",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
+    fetchLastWorkoutData();
+  }, [currentUser, selectedExercise, toast]);
+
+  const resetForm = () => {
+    setSelectedSets(null);
+    setSelectedReps(null);
+    setWeight("");
+    setTime("");
+    setCalories("");
+  };
+
+  const renderExerciseButtons = (
+    exercises: string[] | undefined,
+    isCardio: boolean
+  ) => (
+    <div className="grid grid-cols-2 gap-2">
+      {exercises?.map((exercise: string) => (
+        <Button
+          key={exercise}
+          type="button"
+          variant={
+            selectedExercise === exercise && isCardio === isCardio
+              ? "default"
+              : "outline"
+          }
+          onClick={() => {
+            setSelectedExercise(exercise);
+            setIsCardio(isCardio);
+          }}
+        >
+          {exercise}
+        </Button>
+      ))}
+    </div>
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoggingWorkout(true);
+    setIsLoading(true);
 
-    const formData = new FormData(e.currentTarget);
-    formData.append("user", currentUser);
-    formData.append("date", format(selectedDate, "yyyy-MM-dd"));
+    if (!isCardio) {
+      if (!selectedSets || !selectedReps || !weight) {
+        toast({
+          title: "Error",
+          description:
+            "Please select sets, reps, and input weight for strength training exercises.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+    } else {
+      if (!time || !calories) {
+        toast({
+          title: "Error",
+          description: "Please input time and calories for cardio exercises.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+    }
 
-    try {
-      await logWorkout(formData);
-      await fetchWorkoutsForWeek();
+    const result = await logWorkout(
+      currentUser,
+      format(selectedDate, "yyyy-MM-dd"),
+      selectedExercise,
+      isCardio,
+      selectedSets,
+      selectedReps,
+      isCardio ? null : parseFloat(weight),
+      isCardio ? parseFloat(time) : null,
+      isCardio ? parseFloat(calories) : null
+    );
 
+    if (result.success) {
       toast({
-        title: "Workout logged",
-        description: `Successfully logged workout for ${currentUser} on ${format(
-          selectedDate,
-          "yyyy-MM-dd"
-        )}.`,
+        title: "Success",
+        description: "Workout logged successfully!",
         variant: "success",
       });
-
-      // Reset form fields
-      setSelectedExercise("");
-      setSelectedSets(3);
-      setWeightInput("");
-      setTimeInput("");
-      setCaloriesInput("");
-    } catch (error) {
-      console.error("Failed to log workout:", error);
+      resetForm();
+    } else if (result.existingWorkout) {
+      toast({
+        title: "Workout Already Logged",
+        description:
+          "A workout for this exercise is already logged for the selected day.",
+        variant: "destructive",
+        action: (
+          <Button
+            variant="outline"
+            onClick={() => handleOverwrite(result.existingWorkout.id)}
+          >
+            Overwrite
+          </Button>
+        ),
+      });
+    } else {
       toast({
         title: "Error",
         description: "Failed to log workout. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsLoggingWorkout(false);
+    }
+    setIsLoading(false);
+  };
+
+  const handleOverwrite = async (workoutId: number) => {
+    const result = await overwriteWorkout(
+      workoutId,
+      selectedSets,
+      selectedReps,
+      isCardio ? null : parseFloat(weight),
+      isCardio ? parseFloat(time) : null,
+      isCardio ? parseFloat(calories) : null
+    );
+
+    if (result.success) {
+      toast({
+        title: "Success",
+        description: "Workout updated successfully!",
+        variant: "success",
+      });
+      resetForm();
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to update workout. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleWeekChange = useCallback(
-    async (startDateString: string, endDate: string) => {
-      console.log(`Week changed: ${startDateString} to ${endDate}`);
-      const startDate = parseISO(startDateString);
-      setWeekStartDate(startDate);
-      setSelectedDate(startDate);
-      console.log("selectedDate", selectedDate);
-      await fetchWorkoutsForWeek();
-    },
-    [fetchWorkoutsForWeek, selectedDate]
-  );
+  const renderWorkoutForm = () => (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Day selection buttons */}
+      <div>
+        <Label className="mb-2 block">Select Day</Label>
+        <div className="grid grid-cols-7 gap-2">
+          {Array.from({ length: 7 }, (_, i) => addDays(weekStartDate, i)).map(
+            (date) => (
+              <Button
+                key={format(date, "yyyy-MM-dd")}
+                type="button"
+                variant={
+                  selectedDate.getTime() === date.getTime()
+                    ? "default"
+                    : "outline"
+                }
+                onClick={() => {
+                  setSelectedDate(date);
+                  setIsCardio(false);
+                  setSelectedExercise("");
+                  setSelectedSets(null);
+                  setSelectedReps(null);
+                }}
+                className="flex flex-col items-center p-2 h-auto"
+              >
+                <span className="text-xs">{format(date, "EEE")}</span>
+                <span className="text-lg font-bold">{format(date, "d")}</span>
+              </Button>
+            )
+          )}
+        </div>
+      </div>
 
-  const currentDayWorkout = getCurrentWorkoutSchedule()[selectedDate.getDay()];
-  const currentDayExercises = currentDayWorkout?.exercises || [];
-  const currentDayCardio = currentDayWorkout?.cardio || [];
+     {/* Exercise selection buttons */}
+     <div>
+        <Label className="mb-2 block">Select Exercise</Label>
+        {renderExerciseButtons(currentDayExercises, false)}
+      </div>
+
+      {/* Cardio selection buttons */}
+      <div>
+        <Label className="mb-2 block">Cardio</Label>
+        {renderExerciseButtons(currentDayCardio, true)}
+      </div>
+
+      {selectedExercise && (
+        <>
+          {isCardio ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="time">Time (minutes)</Label>
+                <Input
+                  id="time"
+                  name="time"
+                  placeholder="Enter time"
+                  type="number"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="calories">Calories Burned</Label>
+                <Input
+                  id="calories"
+                  name="calories"
+                  placeholder="Enter calories"
+                  type="number"
+                  value={calories}
+                  onChange={(e) => setCalories(e.target.value)}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label className="mb-2 block">Sets</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={selectedSets === 3 ? "default" : "outline"}
+                    onClick={() => setSelectedSets(3)}
+                  >
+                    3
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={selectedSets === 4 ? "default" : "outline"}
+                    onClick={() => setSelectedSets(4)}
+                  >
+                    4
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="mb-2 block">Reps</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={selectedReps === "6-8" ? "default" : "outline"}
+                    onClick={() => setSelectedReps("6-8")}
+                  >
+                    6-8
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={selectedReps === "10-12" ? "default" : "outline"}
+                    onClick={() => setSelectedReps("10-12")}
+                  >
+                    10-12
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="weight">Weight (kg)</Label>
+                <Input
+                  id="weight"
+                  name="weight"
+                  placeholder="Enter weight"
+                  type="number"
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                />
+              </div>
+            </>
+          )}
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Logging...
+              </>
+            ) : (
+              "Log Workout"
+            )}
+          </Button>
+        </>
+      )}
+    </form>
+  );
 
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Progress Tracker</h1>
       <Tabs
         defaultValue="phil"
-        onValueChange={(value) => {
-          setCurrentUser(value as "phil" | "eliza");
-          setSelectedExercise(""); // Reset selected exercise when changing users
-        }}
+        onValueChange={(value) => setCurrentUser(value as "phil" | "eliza")}
       >
         <TabsList className="mb-4">
           <TabsTrigger value="phil">Phil</TabsTrigger>
@@ -339,214 +450,38 @@ export default function WorkoutTracker() {
                 Select a day and exercise to log your workout
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <input
-                  type="hidden"
-                  name="date"
-                  value={format(selectedDate, "yyyy-MM-dd")}
-                />
-                <input type="hidden" name="exercise" value={selectedExercise} />
-                <input
-                  type="hidden"
-                  name="isCardio"
-                  value={isCardio.toString()}
-                />
-
-                {/* Day selection buttons */}
-                <div>
-                  <Label className="mb-2 block">Select Day</Label>
-                  <div className="grid grid-cols-7 gap-2">
-                    {Array.from({ length: 7 }, (_, i) =>
-                      addDays(weekStartDate, i)
-                    ).map((date) => (
-                      <Button
-                        key={format(date, "yyyy-MM-dd")}
-                        type="button"
-                        variant={
-                          selectedDate.getTime() === date.getTime()
-                            ? "default"
-                            : "outline"
-                        }
-                        onClick={() => {
-                          setSelectedDate(date);
-                          setIsCardio(false);
-                          setSelectedExercise("");
-                        }}
-                        className="flex flex-col items-center p-2 h-auto"
-                      >
-                        <span className="text-xs">{format(date, "EEE")}</span>
-                        <span className="text-lg font-bold">
-                          {format(date, "d")}
-                        </span>
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Exercise selection buttons */}
-                <div>
-                  <Label className="mb-2 block">Select Exercise</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {currentDayExercises.map((exercise: string) => (
-                      <Button
-                        key={exercise}
-                        type="button"
-                        variant={
-                          selectedExercise === exercise && !isCardio
-                            ? "default"
-                            : "outline"
-                        }
-                        onClick={() => {
-                          setSelectedExercise(exercise);
-                          setIsCardio(false);
-                        }}
-                      >
-                        {exercise}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Cardio selection buttons */}
-                <div>
-                  <Label className="mb-2 block">Cardio</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {currentDayCardio.map((cardioExercise: string) => (
-                      <Button
-                        key={cardioExercise}
-                        type="button"
-                        variant={
-                          selectedExercise === cardioExercise && isCardio
-                            ? "default"
-                            : "outline"
-                        }
-                        onClick={() => {
-                          setSelectedExercise(cardioExercise);
-                          setIsCardio(true);
-                        }}
-                      >
-                        {cardioExercise}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {selectedExercise && (
-                  <>
-                    {isCardio ? (
-                      <>
-                        <div className="space-y-2">
-                          <Label htmlFor="time">Time (minutes)</Label>
-                          <Input
-                            id="time"
-                            name="time"
-                            value={timeInput}
-                            onChange={(e) => setTimeInput(e.target.value)}
-                            placeholder="Enter time"
-                            type="number"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="calories">Calories Burned</Label>
-                          <Input
-                            id="calories"
-                            name="calories"
-                            value={caloriesInput}
-                            onChange={(e) => setCaloriesInput(e.target.value)}
-                            placeholder="Enter calories"
-                            type="number"
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="space-y-2">
-                          <Label>Sets</Label>
-                          <div className="flex space-x-2">
-                            <Button
-                              type="button"
-                              variant={
-                                selectedSets === 3 ? "default" : "outline"
-                              }
-                              onClick={() => setSelectedSets(3)}
-                            >
-                              3 Sets
-                            </Button>
-                            <Button
-                              type="button"
-                              variant={
-                                selectedSets === 4 ? "default" : "outline"
-                              }
-                              onClick={() => setSelectedSets(4)}
-                            >
-                              4 Sets
-                            </Button>
-                          </div>
-                          <input
-                            type="hidden"
-                            name="sets"
-                            value={selectedSets}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="weight">Weight (kg)</Label>
-                          <Input
-                            id="weight"
-                            name="weight"
-                            value={weightInput}
-                            onChange={(e) => setWeightInput(e.target.value)}
-                            placeholder="Enter weight"
-                            type="number"
-                          />
-                        </div>
-                      </>
-                    )}
-                    <Button
-                      type="submit"
-                      disabled={isLoggingWorkout || !selectedExercise}
-                    >
-                      {isLoggingWorkout ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Logging...
-                        </>
-                      ) : (
-                        "Log Workout"
-                      )}
-                    </Button>
-                  </>
-                )}
-              </form>
-            </CardContent>
+            <CardContent>{renderWorkoutForm()}</CardContent>
             <CardFooter>
               <div className="w-full">
-                <h3 className="font-semibold mb-2">
-                  Completed Workouts for {format(selectedDate, "yyyy-MM-dd")}:
-                </h3>
-                {isFetchingWorkouts ? (
-                  <div className="flex items-center justify-center py-4">
+                <h3 className="font-semibold mb-2">Completed Workouts:</h3>
+                {isWorkoutsLoading ? (
+                  <div className="flex items-center justify-center">
                     <Loader2 className="h-6 w-6 animate-spin" />
                     <span className="ml-2">Loading workouts...</span>
                   </div>
-                ) : completedWorkouts[format(selectedDate, "yyyy-MM-dd")] &&
-                  completedWorkouts[format(selectedDate, "yyyy-MM-dd")].length >
-                    0 ? (
-                  <ul className="list-disc pl-5">
-                    {completedWorkouts[format(selectedDate, "yyyy-MM-dd")].map(
-                      (workout, index) => (
-                        <li key={index}>
-                          {workout.exercise}:{" "}
-                          {workout.time !== undefined
-                            ? `${workout.time} minutes, ${workout.calories} calories`
-                            : `${workout.sets} sets x ${workout.weight} kg`}
-                        </li>
-                      )
-                    )}
+                ) : Object.keys(workouts).length > 0 ? (
+                  <ul className="space-y-2">
+                    {Object.entries(workouts).map(([date, dayWorkouts]) => (
+                      <li key={date} className="border-b pb-2">
+                        <span className="font-semibold">
+                          {format(new Date(date), "MMM d")}:
+                        </span>
+                        <ul className="list-disc pl-5 mt-1">
+                          {dayWorkouts.map((workout, index) => (
+                            <li key={index} className="text-sm">
+                              {workout.exercise}:{" "}
+                              {workout.is_cardio
+                                ? `${workout.time} min, ${workout.calories} cal`
+                                : `${workout.sets} sets of ${workout.reps} @ ${workout.weight}kg`}
+                            </li>
+                          ))}
+                        </ul>
+                      </li>
+                    ))}
                   </ul>
                 ) : (
                   <p className="text-sm text-gray-500">
-                    No workouts logged for this day yet.
+                    No workouts logged yet.
                   </p>
                 )}
               </div>
@@ -555,8 +490,9 @@ export default function WorkoutTracker() {
         ) : (
           <WorkoutCalendar
             userId={currentUser}
-            workouts={completedWorkouts}
+            workouts={workouts}
             onWeekChange={handleWeekChange}
+            isLoading={isWorkoutsLoading}
           />
         )}
       </Tabs>
