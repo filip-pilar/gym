@@ -3,7 +3,7 @@
 export const philWorkoutSchedule = [
   {
     day: "Day 1",
-    type: "Push",
+    type: "Push 1st",
     exercises: [
       "Chest Press Machine",
       "Incline Chest Press Machine",
@@ -16,7 +16,7 @@ export const philWorkoutSchedule = [
   },
   {
     day: "Day 2",
-    type: "Pull",
+    type: "Pull 1st",
     exercises: [
       "Lat Pulldown Machine",
       "Seated Cable Row Machine",
@@ -29,7 +29,7 @@ export const philWorkoutSchedule = [
   },
   {
     day: "Day 3",
-    type: "Legs",
+    type: "Legs 1st",
     exercises: [
       "Leg Press Machine",
       "Leg Extension Machine",
@@ -42,7 +42,7 @@ export const philWorkoutSchedule = [
   },
   {
     day: "Day 4",
-    type: "Push",
+    type: "Push 2nd",
     exercises: [
       "Pec Deck Machine (Chest Fly)",
       "Machine Shoulder Press",
@@ -54,7 +54,7 @@ export const philWorkoutSchedule = [
   },
   {
     day: "Day 5",
-    type: "Pull",
+    type: "Pull 2nd",
     exercises: [
       "Assisted Pull-Up Machine",
       "Row Machine",
@@ -66,7 +66,7 @@ export const philWorkoutSchedule = [
   },
   {
     day: "Day 6",
-    type: "Legs",
+    type: "Legs 2nd",
     exercises: [
       "Hack Squat Machine",
       "Leg Press Machine",

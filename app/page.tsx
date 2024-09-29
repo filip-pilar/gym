@@ -1,10 +1,5 @@
 "use client";
-import React, {
-  useState,
-  useMemo,
-  useCallback,
-  useEffect
-} from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +14,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 
-import { format, addDays, startOfWeek, endOfWeek } from "date-fns";
+import { format, addDays, startOfWeek, endOfWeek, isSameDay } from "date-fns";
 import { WorkoutCalendar } from "@/components/WorkoutCalendar";
 import { elizaWorkoutSchedule, philWorkoutSchedule } from "@/lib/workoutPlans";
 import {
@@ -29,26 +24,29 @@ import {
   overwriteWorkout,
 } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
+import { ProgressChart } from "@/components/ProgressChart";
 
 export default function WorkoutTracker() {
   const [currentUser, setCurrentUser] = useState<"phil" | "eliza">("phil");
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [view, setView] = useState<"log" | "calendar">("log");
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    const today = new Date();
+    return startOfWeek(today, { weekStartsOn: 0 });
+  });
+  const [view, setView] = useState<"log" | "calendar" | "progress">("log");
   const [selectedExercise, setSelectedExercise] = useState("");
   const [isCardio, setIsCardio] = useState(false);
   const [selectedSets, setSelectedSets] = useState<3 | 4 | null>(null);
-  const [selectedReps, setSelectedReps] = useState<"6-8" | "10-12" | null>(
-    null
-  );
+  const [selectedReps, setSelectedReps] = useState<"6-8" | "10-12" | null>(null);
   const [weight, setWeight] = useState<string>("");
   const [time, setTime] = useState<string>("");
   const [calories, setCalories] = useState<string>("");
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [workouts, setWorkouts] = useState<CompletedWorkouts>({});
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(
-    startOfWeek(new Date(), { weekStartsOn: 0 })
-  );
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
+    const today = new Date();
+    return startOfWeek(today, { weekStartsOn: 0 });
+  });
   const [isWorkoutsLoading, setIsWorkoutsLoading] = useState(false);
 
   const getCurrentWorkoutSchedule = useMemo(
@@ -60,8 +58,6 @@ export default function WorkoutTracker() {
     getCurrentWorkoutSchedule[selectedDate.getDay() as keyof WorkoutSchedule];
   const currentDayExercises = currentDayWorkout.exercises;
   const currentDayCardio = currentDayWorkout.cardio;
-
-  const weekStartDate = startOfWeek(selectedDate, { weekStartsOn: 0 });
 
   const handleWeekChange = useCallback((start: string) => {
     const newStartDate = new Date(start);
@@ -282,13 +278,13 @@ export default function WorkoutTracker() {
       <div>
         <Label className="mb-2 block">Select Day</Label>
         <div className="grid grid-cols-7 gap-2">
-          {Array.from({ length: 7 }, (_, i) => addDays(weekStartDate, i)).map(
+          {Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i)).map(
             (date) => (
               <Button
                 key={format(date, "yyyy-MM-dd")}
                 type="button"
                 variant={
-                  selectedDate.getTime() === date.getTime()
+                  isSameDay(selectedDate, date)
                     ? "default"
                     : "outline"
                 }
@@ -416,6 +412,19 @@ export default function WorkoutTracker() {
     </form>
   );
 
+  const renderProgressView = () => {
+    if (isWorkoutsLoading) {
+      return (
+        <div className="flex items-center justify-center h-80">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading workout data...</span>
+        </div>
+      );
+    }
+
+    return <ProgressChart userId={currentUser} />;
+  };
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Progress Tracker</h1>
@@ -438,8 +447,15 @@ export default function WorkoutTracker() {
           <Button
             onClick={() => setView("calendar")}
             variant={view === "calendar" ? "default" : "outline"}
+            className="mr-2"
           >
             Calendar View
+          </Button>
+          <Button
+            onClick={() => setView("progress")}
+            variant={view === "progress" ? "default" : "outline"}
+          >
+            Progress
           </Button>
         </div>
         {view === "log" ? (
@@ -487,13 +503,15 @@ export default function WorkoutTracker() {
               </div>
             </CardFooter>
           </Card>
-        ) : (
+        ) : view === "calendar" ? (
           <WorkoutCalendar
             userId={currentUser}
             workouts={workouts}
             onWeekChange={handleWeekChange}
             isLoading={isWorkoutsLoading}
           />
+        ) : (
+          renderProgressView()
         )}
       </Tabs>
     </div>
