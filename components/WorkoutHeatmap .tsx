@@ -138,7 +138,7 @@ export default function WorkoutHeatmap({ userId }: WorkoutHeatmapProps) {
 
   const renderHeatmap = () => {
     const cells = [];
-    let currentDate = new Date(startDate);
+    const currentDate = new Date(startDate);
 
     for (let week = 0; week < WEEKS_TO_SHOW; week++) {
       for (let day = 0; day < DAYS_IN_WEEK; day++) {
@@ -173,7 +173,7 @@ export default function WorkoutHeatmap({ userId }: WorkoutHeatmapProps) {
 
   const renderMonthLabels = () => {
     const months = [];
-    let currentDate = new Date(startDate);
+    const currentDate = new Date(startDate);
     let currentMonth = currentDate.getMonth();
 
     for (let week = 0; week < WEEKS_TO_SHOW; week++) {

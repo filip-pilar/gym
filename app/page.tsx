@@ -25,7 +25,6 @@ import { format, addDays, startOfWeek, endOfWeek, isSameDay } from "date-fns";
 import { WorkoutCalendar } from "@/components/WorkoutCalendar";
 import { elizaWorkoutSchedule, philWorkoutSchedule } from "@/lib/workoutPlans";
 import {
-  fetchAllWorkouts,
   fetchExercises,
   fetchLastWorkout,
   logWorkout,
