@@ -40,9 +40,6 @@ export default function WorkoutTracker() {
     const today = new Date();
     return startOfWeek(today, { weekStartsOn: 0 });
   });
-  const [workoutCounts, setWorkoutCounts] = useState<Record<string, number>>(
-    {}
-  );
   const [view, setView] = useState<"log" | "calendar" | "progress" | "stats">(
     "log"
   );
