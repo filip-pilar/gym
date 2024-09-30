@@ -25,6 +25,7 @@ import { format, addDays, startOfWeek, endOfWeek, isSameDay } from "date-fns";
 import { WorkoutCalendar } from "@/components/WorkoutCalendar";
 import { elizaWorkoutSchedule, philWorkoutSchedule } from "@/lib/workoutPlans";
 import {
+  fetchAllWorkouts,
   fetchExercises,
   fetchLastWorkout,
   logWorkout,
@@ -32,6 +33,7 @@ import {
 } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 import { ProgressChart } from "@/components/ProgressChart";
+import WorkoutHeatmap from "@/components/WorkoutHeatmap ";
 
 export default function WorkoutTracker() {
   const [currentUser, setCurrentUser] = useState<"phil" | "eliza">("phil");
@@ -39,7 +41,12 @@ export default function WorkoutTracker() {
     const today = new Date();
     return startOfWeek(today, { weekStartsOn: 0 });
   });
-  const [view, setView] = useState<"log" | "calendar" | "progress">("log");
+  const [workoutCounts, setWorkoutCounts] = useState<Record<string, number>>(
+    {}
+  );
+  const [view, setView] = useState<"log" | "calendar" | "progress" | "stats">(
+    "log"
+  );
   const [selectedExercise, setSelectedExercise] = useState("");
   const [isCardio, setIsCardio] = useState(false);
   const [selectedSets, setSelectedSets] = useState<3 | 4 | null>(null);
@@ -66,9 +73,18 @@ export default function WorkoutTracker() {
 
   const currentDayWorkout = useMemo(() => {
     if (selectedDaySchedule) {
-      return getCurrentWorkoutSchedule.find(day => day.day.toString() === selectedDaySchedule) || { exercises: [], cardio: [] };
+      return (
+        getCurrentWorkoutSchedule.find(
+          (day) => day.day.toString() === selectedDaySchedule
+        ) || { exercises: [], cardio: [] }
+      );
     }
-    return getCurrentWorkoutSchedule[selectedDate.getDay()] || { exercises: [], cardio: [] };
+    return (
+      getCurrentWorkoutSchedule[selectedDate.getDay()] || {
+        exercises: [],
+        cardio: [],
+      }
+    );
   }, [getCurrentWorkoutSchedule, selectedDate, selectedDaySchedule]);
 
   const handleWeekChange = useCallback((start: string) => {
@@ -161,31 +177,6 @@ export default function WorkoutTracker() {
     setTime("");
     setCalories("");
   };
-
-  const renderExerciseButtons = (
-    exercises: string[] | undefined,
-    isCardio: boolean
-  ) => (
-    <div className="grid grid-cols-2 gap-2">
-      {exercises?.map((exercise: string) => (
-        <Button
-          key={exercise}
-          type="button"
-          variant={
-            selectedExercise === exercise && isCardio === isCardio
-              ? "default"
-              : "outline"
-          }
-          onClick={() => {
-            setSelectedExercise(exercise);
-            setIsCardio(isCardio);
-          }}
-        >
-          {exercise}
-        </Button>
-      ))}
-    </div>
-  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -299,6 +290,44 @@ export default function WorkoutTracker() {
     setIsCardio(false);
     resetForm();
   };
+
+  const renderProgressView = () => {
+    if (isWorkoutsLoading) {
+      return (
+        <div className="flex items-center justify-center h-80">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading workout data...</span>
+        </div>
+      );
+    }
+
+    return <ProgressChart userId={currentUser} />;
+  };
+
+  const renderExerciseButtons = (
+    exercises: string[] | undefined,
+    isCardio: boolean
+  ) => (
+    <div className="grid grid-cols-2 gap-2">
+      {exercises?.map((exercise: string) => (
+        <Button
+          key={exercise}
+          type="button"
+          variant={
+            selectedExercise === exercise && isCardio === isCardio
+              ? "default"
+              : "outline"
+          }
+          onClick={() => {
+            setSelectedExercise(exercise);
+            setIsCardio(isCardio);
+          }}
+        >
+          {exercise}
+        </Button>
+      ))}
+    </div>
+  );
 
   const renderWorkoutForm = () => (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -450,19 +479,6 @@ export default function WorkoutTracker() {
     </form>
   );
 
-  const renderProgressView = () => {
-    if (isWorkoutsLoading) {
-      return (
-        <div className="flex items-center justify-center h-80">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading workout data...</span>
-        </div>
-      );
-    }
-
-    return <ProgressChart userId={currentUser} />;
-  };
-
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Progress Tracker</h1>
@@ -492,8 +508,15 @@ export default function WorkoutTracker() {
           <Button
             onClick={() => setView("progress")}
             variant={view === "progress" ? "default" : "outline"}
+            className="mr-2"
           >
             Progress
+          </Button>
+          <Button
+            onClick={() => setView("stats")}
+            variant={view === "stats" ? "default" : "outline"}
+          >
+            Stats
           </Button>
         </div>
         {view === "log" ? (
@@ -548,9 +571,11 @@ export default function WorkoutTracker() {
             onWeekChange={handleWeekChange}
             isLoading={isWorkoutsLoading}
           />
-        ) : (
+        ) : view === "progress" ? (
           renderProgressView()
-        )}
+        ) : view === "stats" ? (
+          <WorkoutHeatmap userId={currentUser} />
+        ) : null}
       </Tabs>
     </div>
   );

@@ -167,3 +167,19 @@ export async function fetchAllExerciseData(userId: string, exerciseName: string)
     return { success: false, message: "Failed to fetch exercise data" };
   }
 }
+
+export async function fetchAllWorkouts(userId: string): Promise<{ success: boolean; workouts?: Workout[]; message?: string }> {
+    try {
+      const { rows } = await sql`
+        SELECT date, exercise
+        FROM workouts
+        WHERE user_id = ${userId}
+        ORDER BY date
+      `;
+  
+      return { success: true, workouts: rows as Workout[] };
+    } catch (error) {
+      console.error("Error fetching workouts:", error);
+      return { success: false, message: "Failed to fetch workout data" };
+    }
+  }
