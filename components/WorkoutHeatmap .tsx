@@ -16,111 +16,111 @@ import {
 import { fetchAllWorkouts } from "@/lib/actions";
 
 Date.prototype.getWeek = function (): number {
-  const d = new Date(
-    Date.UTC(this.getFullYear(), this.getMonth(), this.getDate())
-  );
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-};
-
-const DAYS_IN_WEEK = 7;
-const WEEKS_TO_SHOW = 52;
-const CELL_SIZE = 14;
-const CELL_MARGIN = 2;
-const MONTH_LABEL_HEIGHT = 20;
-const DAY_LABEL_WIDTH = 30;
-
-export default function WorkoutHeatmap({ userId }: WorkoutHeatmapProps) {
-  const [workoutCounts, setWorkoutCounts] = useState<Record<string, number>>(
-    {}
-  );
-  const [stats, setStats] = useState<WorkoutStats | null>(null);
-  const [startDate, setStartDate] = useState(
-    new Date(new Date().getFullYear(), 0, 1)
-  );
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const result = await fetchAllWorkouts(userId);
-      if (result.success && result.workouts) {
-        processWorkouts(result.workouts);
-        setError(null);
-      } else {
-        setError(result.message || "Failed to fetch workout data");
-      }
-    };
-    fetchData();
-  }, [userId]);
-
-  const processWorkouts = (workouts: Workout[]) => {
-    const counts: Record<string, number> = {};
-    let currentStreak = 0;
-    let bestStreak = 0;
-    let currentWeeklyStreak = 0;
-    let bestWeeklyStreak = 0;
-    let lastWorkoutDate: Date | null = null;
-    let totalDaysWorkedOut = 0;
-    const weekSet = new Set<string>();
-
-    workouts.forEach((workout) => {
-      const workoutDate = new Date(workout.date);
-      const dateString = workoutDate.toISOString().split("T")[0];
-      const weekString = `${workoutDate.getFullYear()}-${workoutDate.getWeek()}`;
-
-      if (!counts[dateString]) {
-        counts[dateString] = 1;
-        totalDaysWorkedOut++;
-        weekSet.add(weekString);
-
-        if (lastWorkoutDate) {
-          const dayDiff =
-            (workoutDate.getTime() - lastWorkoutDate.getTime()) /
-            (1000 * 3600 * 24);
-          if (dayDiff === 1) {
-            currentStreak++;
-            bestStreak = Math.max(bestStreak, currentStreak);
+    const d = new Date(
+      Date.UTC(this.getFullYear(), this.getMonth(), this.getDate())
+    );
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  };
+  
+  const DAYS_IN_WEEK = 7;
+  const WEEKS_TO_SHOW = 52;
+  const CELL_SIZE = 14;
+  const CELL_MARGIN = 2;
+  const MONTH_LABEL_HEIGHT = 20;
+  const DAY_LABEL_WIDTH = 30;
+  
+  export default function WorkoutHeatmap({ userId }: WorkoutHeatmapProps) {
+    const [workoutCounts, setWorkoutCounts] = useState<Record<string, number>>(
+      {}
+    );
+    const [stats, setStats] = useState<WorkoutStats | null>(null);
+    const [startDate, setStartDate] = useState(
+      new Date(new Date().getFullYear(), 0, 1)
+    );
+    const [error, setError] = useState<string | null>(null);
+  
+    useEffect(() => {
+      const fetchData = async () => {
+        const result = await fetchAllWorkouts(userId);
+        if (result.success && result.workouts) {
+          processWorkouts(result.workouts);
+          setError(null);
+        } else {
+          setError(result.message || "Failed to fetch workout data");
+        }
+      };
+      fetchData();
+    }, [userId]);
+  
+    const processWorkouts = (workouts: Workout[]) => {
+      const counts: Record<string, number> = {};
+      let currentStreak = 0;
+      let bestStreak = 0;
+      let currentWeeklyStreak = 0;
+      let bestWeeklyStreak = 0;
+      let lastWorkoutDate: Date | null = null;
+      let totalDaysWorkedOut = 0;
+      const weekSet = new Set<string>();
+  
+      workouts.forEach((workout) => {
+        const workoutDate = new Date(workout.date);
+        const dateString = workoutDate.toISOString().split("T")[0];
+        const weekString = `${workoutDate.getFullYear()}-${workoutDate.getWeek()}`;
+  
+        if (!counts[dateString]) {
+          counts[dateString] = 1;
+          totalDaysWorkedOut++;
+          weekSet.add(weekString);
+  
+          if (lastWorkoutDate) {
+            const dayDiff =
+              (workoutDate.getTime() - lastWorkoutDate.getTime()) /
+              (1000 * 3600 * 24);
+            if (dayDiff === 1) {
+              currentStreak++;
+            } else {
+              currentStreak = 1;
+            }
           } else {
             currentStreak = 1;
           }
+          bestStreak = Math.max(bestStreak, currentStreak);
+          lastWorkoutDate = workoutDate;
         } else {
-          currentStreak = 1;
+          counts[dateString]++;
         }
-        lastWorkoutDate = workoutDate;
-      } else {
-        counts[dateString]++;
-      }
-    });
-
-    // Calculate weekly streak
-    const sortedWeeks = Array.from(weekSet).sort();
-    let lastWeekNum = -1;
-    sortedWeeks.forEach((week) => {
-      const weekNum = parseInt(week.split("-")[1]);
-      if (lastWeekNum === -1 || weekNum === lastWeekNum + 1) {
-        currentWeeklyStreak++;
-        bestWeeklyStreak = Math.max(bestWeeklyStreak, currentWeeklyStreak);
-      } else {
-        currentWeeklyStreak = 1;
-      }
-      lastWeekNum = weekNum;
-    });
-
-    setWorkoutCounts(counts);
-
-    // Handle the case when there are no workouts
-    const totalWeeks = workouts.length > 0 ? Math.ceil(workouts.length / 7) : 1;
-    const avgDaysPerWeek = totalWeeks > 0 ? totalDaysWorkedOut / totalWeeks : 0;
-
-    setStats({
-      totalWorkouts: workouts.length,
-      avgDaysPerWeek,
-      bestStreak,
-      currentWeeklyStreak,
-    });
-  };
+      });
+  
+      // Calculate weekly streak
+      const sortedWeeks = Array.from(weekSet).sort();
+      let lastWeekNum = -1;
+      sortedWeeks.forEach((week) => {
+        const weekNum = parseInt(week.split("-")[1]);
+        if (lastWeekNum === -1 || weekNum === lastWeekNum + 1) {
+          currentWeeklyStreak++;
+          bestWeeklyStreak = Math.max(bestWeeklyStreak, currentWeeklyStreak);
+        } else {
+          currentWeeklyStreak = 1;
+        }
+        lastWeekNum = weekNum;
+      });
+  
+      setWorkoutCounts(counts);
+  
+      // Handle the case when there are no workouts
+      const totalWeeks = workouts.length > 0 ? Math.ceil(workouts.length / 7) : 1;
+      const avgDaysPerWeek = totalWeeks > 0 ? totalDaysWorkedOut / totalWeeks : 0;
+  
+      setStats({
+        totalWorkouts: workouts.length,
+        avgDaysPerWeek,
+        bestStreak,
+        currentWeeklyStreak,
+      });
+    };
 
   const shiftDateRange = (weeks: number) => {
     setStartDate(
