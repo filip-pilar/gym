@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -25,6 +25,7 @@ import { format, addDays, startOfWeek, endOfWeek, isSameDay } from "date-fns";
 import { WorkoutCalendar } from "@/components/WorkoutCalendar";
 import { elizaWorkoutSchedule, philWorkoutSchedule } from "@/lib/workoutPlans";
 import {
+  deleteWorkout,
   fetchExercises,
   fetchLastWorkout,
   logWorkout,
@@ -33,9 +34,20 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ProgressChart } from "@/components/ProgressChart";
 import WorkoutHeatmap from "@/components/WorkoutHeatmap ";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function WorkoutTracker() {
-  const [currentUser, setCurrentUser] = useState<"phil" | "eliza">("phil");
+  const [currentUser, setCurrentUser] = useState<"phil" | "eliza">("eliza");
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     const today = new Date();
     return startOfWeek(today, { weekStartsOn: 0 });
@@ -46,21 +58,25 @@ export default function WorkoutTracker() {
   const [selectedExercise, setSelectedExercise] = useState("");
   const [isCardio, setIsCardio] = useState(false);
   const [selectedSets, setSelectedSets] = useState<3 | 4 | null>(null);
-  const [selectedReps, setSelectedReps] = useState<"6-8" | "10-12" | null>(
-    null
-  );
+  const [selectedReps, setSelectedReps] = useState<
+    "6-8" | "10-12" | "3-4" | null
+  >(null);
   const [weight, setWeight] = useState<string>("");
   const [time, setTime] = useState<string>("");
   const [calories, setCalories] = useState<string>("");
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [workouts, setWorkouts] = useState<CompletedWorkouts>({});
+
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
     const today = new Date();
     return startOfWeek(today, { weekStartsOn: 0 });
   });
   const [isWorkoutsLoading, setIsWorkoutsLoading] = useState(false);
   const [selectedDaySchedule, setSelectedDaySchedule] = useState<string>("");
+  const [deletingWorkoutId, setDeletingWorkoutId] = useState<number | null>(
+    null
+  );
 
   const getCurrentWorkoutSchedule = useMemo(
     () => (currentUser === "phil" ? philWorkoutSchedule : elizaWorkoutSchedule),
@@ -89,51 +105,55 @@ export default function WorkoutTracker() {
     setCurrentWeekStart(startOfWeek(newStartDate, { weekStartsOn: 0 }));
   }, []);
 
-  useEffect(() => {
-    const fetchWorkoutsForWeek = async () => {
-      setIsWorkoutsLoading(true);
-      const weekStartDate = startOfWeek(currentWeekStart, { weekStartsOn: 0 });
-      const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 0 });
-      const startDateStr = format(weekStartDate, "yyyy-MM-dd");
-      const endDateStr = format(weekEndDate, "yyyy-MM-dd");
+  const fetchWorkoutsForWeek = useCallback(async () => {
+    setIsWorkoutsLoading(true);
+    const weekStartDate = startOfWeek(currentWeekStart, { weekStartsOn: 0 });
+    const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 0 });
+    const startDateStr = format(weekStartDate, "yyyy-MM-dd");
+    const endDateStr = format(weekEndDate, "yyyy-MM-dd");
 
-      try {
-        const result = await fetchExercises(
-          currentUser,
-          startDateStr,
-          endDateStr
-        );
-        if (result.success && result.exercises) {
-          const workoutsByDate = result.exercises.reduce((acc, workout) => {
-            const date = workout.date;
-            if (!acc[date]) acc[date] = [];
-            acc[date].push(workout);
-            return acc;
-          }, {} as CompletedWorkouts);
-
-          setWorkouts(workoutsByDate);
-        } else {
-          console.error("Failed to fetch workouts:", result.message);
-          toast({
-            title: "Error",
-            description: "Failed to fetch workouts. Please try again.",
-            variant: "destructive",
+    try {
+      const result = await fetchExercises(
+        currentUser,
+        startDateStr,
+        endDateStr
+      );
+      if (result.success && result.exercises) {
+        const workoutsByDate = result.exercises.reduce((acc, workout) => {
+          const date = workout.date;
+          if (!acc[date]) acc[date] = [];
+          acc[date].push({
+            ...workout,
+            user_id: currentUser, // Add this line
+            date: date, // Add this line
           });
-        }
-      } catch (error) {
-        console.error("Error fetching workouts:", error);
+          return acc;
+        }, {} as CompletedWorkouts);
+
+        setWorkouts(workoutsByDate);
+      } else {
+        console.error("Failed to fetch workouts:", result.message);
         toast({
           title: "Error",
-          description: "An unexpected error occurred. Please try again.",
+          description: "Failed to fetch workouts. Please try again.",
           variant: "destructive",
         });
-      } finally {
-        setIsWorkoutsLoading(false);
       }
-    };
-
-    fetchWorkoutsForWeek();
+    } catch (error) {
+      console.error("Error fetching workouts:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsWorkoutsLoading(false);
+    }
   }, [currentUser, currentWeekStart, toast]);
+
+  useEffect(() => {
+    fetchWorkoutsForWeek();
+  }, [fetchWorkoutsForWeek]);
 
   useEffect(() => {
     const fetchLastWorkoutData = async () => {
@@ -219,6 +239,25 @@ export default function WorkoutTracker() {
         description: "Workout logged successfully!",
         variant: "success",
       });
+
+      const date = format(selectedDate, "yyyy-MM-dd");
+      setWorkouts((prevWorkouts) => ({
+        ...prevWorkouts,
+        [date]: [
+          ...(prevWorkouts[date] || []),
+          {
+            id: result.workoutId,
+            exercise: selectedExercise,
+            is_cardio: isCardio,
+            sets: selectedSets,
+            reps: selectedReps,
+            weight: isCardio ? null : parseFloat(weight),
+            time: isCardio ? parseFloat(time) : null,
+            calories: isCardio ? parseFloat(calories) : null,
+          },
+        ],
+      }));
+
       resetForm();
     } else if (result.existingWorkout) {
       toast({
@@ -285,6 +324,49 @@ export default function WorkoutTracker() {
     setSelectedExercise("");
     setIsCardio(false);
     resetForm();
+  };
+
+  const handleDeleteWorkout = async (workoutId: number) => {
+    setDeletingWorkoutId(workoutId);
+    try {
+      const result = await deleteWorkout(workoutId);
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: result.message,
+          variant: "success",
+        });
+
+        // Update local state
+        setWorkouts((prevWorkouts) => {
+          const updatedWorkouts = { ...prevWorkouts };
+          for (const date in updatedWorkouts) {
+            updatedWorkouts[date] = updatedWorkouts[date].filter(
+              (workout) => workout.id !== workoutId
+            );
+            if (updatedWorkouts[date].length === 0) {
+              delete updatedWorkouts[date];
+            }
+          }
+          return updatedWorkouts;
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting workout:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingWorkoutId(null);
+    }
   };
 
   const renderProgressView = () => {
@@ -433,6 +515,13 @@ export default function WorkoutTracker() {
                 <div className="flex gap-2">
                   <Button
                     type="button"
+                    variant={selectedReps === "3-4" ? "default" : "outline"}
+                    onClick={() => setSelectedReps("3-4")}
+                  >
+                    3-4
+                  </Button>
+                  <Button
+                    type="button"
                     variant={selectedReps === "6-8" ? "default" : "outline"}
                     onClick={() => setSelectedReps("6-8")}
                   >
@@ -475,11 +564,80 @@ export default function WorkoutTracker() {
     </form>
   );
 
+  const renderWorkoutList = () => (
+    <div className="w-full">
+      <h3 className="font-semibold mb-2">Completed Workouts:</h3>
+      {isWorkoutsLoading ? (
+        <div className="flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span className="ml-2">Loading workouts...</span>
+        </div>
+      ) : Object.keys(workouts).length > 0 ? (
+        <ul className="space-y-2">
+          {Object.entries(workouts).map(([date, dayWorkouts]) => (
+            <li key={date} className="border-b pb-2">
+              <span className="font-semibold">
+                {format(new Date(date), "MMM d")}:
+              </span>
+              <ul className="list-disc pl-5 mt-1">
+                {dayWorkouts.map((workout) => (
+                  <li key={workout.id} className="text-sm flex items-center">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="mr-2"
+                          disabled={deletingWorkoutId === workout.id}
+                        >
+                          {deletingWorkoutId === workout.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently
+                            delete your workout.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteWorkout(workout.id)}
+                          >
+                            Yes, delete workout
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    <span>
+                      {workout.exercise}:{" "}
+                      {workout.is_cardio
+                        ? `${workout.time} min, ${workout.calories} cal`
+                        : `${workout.sets} sets of ${workout.reps} @ ${workout.weight}kg`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-gray-500">No workouts logged yet.</p>
+      )}
+    </div>
+  );
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Progress Tracker</h1>
       <Tabs
-        defaultValue="phil"
+        defaultValue="eliza"
         onValueChange={(value) => setCurrentUser(value as "phil" | "eliza")}
       >
         <TabsList className="mb-4">
@@ -524,41 +682,7 @@ export default function WorkoutTracker() {
               </CardDescription>
             </CardHeader>
             <CardContent>{renderWorkoutForm()}</CardContent>
-            <CardFooter>
-              <div className="w-full">
-                <h3 className="font-semibold mb-2">Completed Workouts:</h3>
-                {isWorkoutsLoading ? (
-                  <div className="flex items-center justify-center">
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                    <span className="ml-2">Loading workouts...</span>
-                  </div>
-                ) : Object.keys(workouts).length > 0 ? (
-                  <ul className="space-y-2">
-                    {Object.entries(workouts).map(([date, dayWorkouts]) => (
-                      <li key={date} className="border-b pb-2">
-                        <span className="font-semibold">
-                          {format(new Date(date), "MMM d")}:
-                        </span>
-                        <ul className="list-disc pl-5 mt-1">
-                          {dayWorkouts.map((workout, index) => (
-                            <li key={index} className="text-sm">
-                              {workout.exercise}:{" "}
-                              {workout.is_cardio
-                                ? `${workout.time} min, ${workout.calories} cal`
-                                : `${workout.sets} sets of ${workout.reps} @ ${workout.weight}kg`}
-                            </li>
-                          ))}
-                        </ul>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-gray-500">
-                    No workouts logged yet.
-                  </p>
-                )}
-              </div>
-            </CardFooter>
+            <CardFooter>{renderWorkoutList()}</CardFooter>
           </Card>
         ) : view === "calendar" ? (
           <WorkoutCalendar

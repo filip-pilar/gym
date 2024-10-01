@@ -27,46 +27,53 @@ async function ensureTableExists() {
 }
 
 export async function logWorkout(
-  userId: string,
-  date: string,
-  exercise: string,
-  isCardio: boolean,
-  sets: number | null,
-  reps: string | null,
-  weight: number | null,
-  time: number | null,
-  calories: number | null
-) {
-  try {
-    await ensureTableExists();
-
-    // Check if a workout already exists for this user and date
-    const existingWorkout = await sql`
-      SELECT * FROM workouts
-      WHERE user_id = ${userId} AND date = ${date} AND exercise = ${exercise}
-    `;
-
-    if (existingWorkout.rows.length > 0) {
-      return {
-        success: false,
-        message: "Workout already logged for this day",
-        existingWorkout: existingWorkout.rows[0],
+    userId: string,
+    date: string,
+    exercise: string,
+    isCardio: boolean,
+    sets: number | null,
+    reps: string | null,
+    weight: number | null,
+    time: number | null,
+    calories: number | null
+  ) {
+    try {
+      await ensureTableExists();
+  
+      // Check if a workout already exists for this user and date
+      const existingWorkout = await sql`
+        SELECT * FROM workouts
+        WHERE user_id = ${userId} AND date = ${date} AND exercise = ${exercise}
+      `;
+  
+      if (existingWorkout.rows.length > 0) {
+        return {
+          success: false,
+          message: "Workout already logged for this day",
+          existingWorkout: existingWorkout.rows[0],
+        };
+      }
+  
+      // Insert the new workout and return the ID
+      const result = await sql`
+        INSERT INTO workouts (user_id, date, exercise, is_cardio, sets, reps, weight, time, calories)
+        VALUES (${userId}, ${date}, ${exercise}, ${isCardio}, ${sets}, ${reps}, ${weight}, ${time}, ${calories})
+        RETURNING id
+      `;
+  
+      const newWorkoutId = result.rows[0].id;
+  
+      revalidatePath("/");
+      return { 
+        success: true, 
+        message: "Workout logged successfully",
+        workoutId: newWorkoutId
       };
+    } catch (error) {
+      console.error("Failed to log workout:", error);
+      return { success: false, message: "Failed to log workout" };
     }
-
-    // Insert the new workout
-    await sql`
-      INSERT INTO workouts (user_id, date, exercise, is_cardio, sets, reps, weight, time, calories)
-      VALUES (${userId}, ${date}, ${exercise}, ${isCardio}, ${sets}, ${reps}, ${weight}, ${time}, ${calories})
-    `;
-
-    revalidatePath("/");
-    return { success: true, message: "Workout logged successfully" };
-  } catch (error) {
-    console.error("Failed to log workout:", error);
-    return { success: false, message: "Failed to log workout" };
   }
-}
 
 export async function overwriteWorkout(
   workoutId: number,
@@ -141,7 +148,10 @@ export async function fetchLastWorkout(userId: string, exerciseName: string) {
   }
 }
 
-export async function fetchAllExerciseData(userId: string, exerciseName: string): Promise<FetchAllExerciseDataResult> {
+export async function fetchAllExerciseData(
+  userId: string,
+  exerciseName: string
+): Promise<FetchAllExerciseDataResult> {
   try {
     await ensureTableExists();
 
@@ -151,16 +161,16 @@ export async function fetchAllExerciseData(userId: string, exerciseName: string)
       ORDER BY date ASC
     `;
 
-    return { 
-      success: true, 
-      data: exerciseData.rows.map(row => ({
+    return {
+      success: true,
+      data: exerciseData.rows.map((row) => ({
         date: row.date,
         weight: row.weight || null,
         sets: row.sets || null,
         reps: row.reps || null,
         time: row.time || null,
-        calories: row.calories || null
-      }))
+        calories: row.calories || null,
+      })),
     };
   } catch (error) {
     console.error("Failed to fetch exercise data:", error);
@@ -168,18 +178,37 @@ export async function fetchAllExerciseData(userId: string, exerciseName: string)
   }
 }
 
-export async function fetchAllWorkouts(userId: string): Promise<{ success: boolean; workouts?: Workout[]; message?: string }> {
-    try {
-      const { rows } = await sql`
+export async function fetchAllWorkouts(
+  userId: string
+): Promise<{ success: boolean; workouts?: Workout[]; message?: string }> {
+  try {
+    const { rows } = await sql`
         SELECT date, exercise
         FROM workouts
         WHERE user_id = ${userId}
         ORDER BY date
       `;
-  
-      return { success: true, workouts: rows as Workout[] };
-    } catch (error) {
-      console.error("Error fetching workouts:", error);
-      return { success: false, message: "Failed to fetch workout data" };
-    }
+
+    return { success: true, workouts: rows as Workout[] };
+  } catch (error) {
+    console.error("Error fetching workouts:", error);
+    return { success: false, message: "Failed to fetch workout data" };
   }
+}
+
+export async function deleteWorkout(workoutId: number) {
+  try {
+    await ensureTableExists();
+
+    await sql`
+        DELETE FROM workouts
+        WHERE id = ${workoutId}
+      `;
+
+    revalidatePath("/");
+    return { success: true, message: "Workout deleted successfully" };
+  } catch (error) {
+    console.error("Failed to delete workout:", error);
+    return { success: false, message: "Failed to delete workout" };
+  }
+}

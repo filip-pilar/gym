@@ -1,14 +1,14 @@
 interface Workout {
   id: number;
-  user_id: string;
-  date: Date | string;
+  user_id?: string;
+  date?: Date | string;
   exercise: string;
   is_cardio: boolean;
-  sets?: number;
-  reps?: string;
-  weight?: number;
-  time?: number;
-  calories?: number;
+  sets?: number | null;
+  reps?: string | null;
+  weight?: number | null;
+  time?: number | null;
+  calories?: number | null;
 }
 
 type CompletedWorkouts = Record<string, Workout[]>;
@@ -61,21 +61,21 @@ type FetchAllExerciseDataResult = {
 };
 
 interface WorkoutStats {
-    totalWorkouts: number;
-    avgDaysPerWeek: number;
-    bestStreak: number;
-    currentWeeklyStreak: number;
-  }
+  totalWorkouts: number;
+  avgDaysPerWeek: number;
+  bestStreak: number;
+  currentWeeklyStreak: number;
+}
 
 interface WorkoutHeatmapProps {
   userId: string;
 }
 
 interface HeatmapValue {
-    date: string;
-    count: number;
-  }
+  date: string;
+  count: number;
+}
 
-  interface Date {
-    getWeek(): number;
-  }
+interface Date {
+  getWeek(): number;
+}

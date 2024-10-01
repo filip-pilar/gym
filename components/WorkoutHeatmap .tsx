@@ -56,43 +56,46 @@ Date.prototype.getWeek = function (): number {
     }, [userId]);
   
     const processWorkouts = (workouts: Workout[]) => {
-      const counts: Record<string, number> = {};
-      let currentStreak = 0;
-      let bestStreak = 0;
-      let currentWeeklyStreak = 0;
-      let bestWeeklyStreak = 0;
-      let lastWorkoutDate: Date | null = null;
-      let totalDaysWorkedOut = 0;
-      const weekSet = new Set<string>();
-  
-      workouts.forEach((workout) => {
-        const workoutDate = new Date(workout.date);
-        const dateString = workoutDate.toISOString().split("T")[0];
-        const weekString = `${workoutDate.getFullYear()}-${workoutDate.getWeek()}`;
-  
-        if (!counts[dateString]) {
-          counts[dateString] = 1;
-          totalDaysWorkedOut++;
-          weekSet.add(weekString);
-  
-          if (lastWorkoutDate) {
-            const dayDiff =
-              (workoutDate.getTime() - lastWorkoutDate.getTime()) /
-              (1000 * 3600 * 24);
-            if (dayDiff === 1) {
-              currentStreak++;
+        const counts: Record<string, number> = {};
+        let currentStreak = 0;
+        let bestStreak = 0;
+        let currentWeeklyStreak = 0;
+        let bestWeeklyStreak = 0;
+        let lastWorkoutDate: Date | null = null;
+        let totalDaysWorkedOut = 0;
+        const weekSet = new Set<string>();
+      
+        workouts.forEach((workout) => {
+          // Check if workout.date is defined
+          if (workout.date) {
+            const workoutDate = new Date(workout.date);
+            const dateString = workoutDate.toISOString().split("T")[0];
+            const weekString = `${workoutDate.getFullYear()}-${workoutDate.getWeek()}`;
+      
+            if (!counts[dateString]) {
+              counts[dateString] = 1;
+              totalDaysWorkedOut++;
+              weekSet.add(weekString);
+      
+              if (lastWorkoutDate) {
+                const dayDiff =
+                  (workoutDate.getTime() - lastWorkoutDate.getTime()) /
+                  (1000 * 3600 * 24);
+                if (dayDiff === 1) {
+                  currentStreak++;
+                } else {
+                  currentStreak = 1;
+                }
+              } else {
+                currentStreak = 1;
+              }
+              bestStreak = Math.max(bestStreak, currentStreak);
+              lastWorkoutDate = workoutDate;
             } else {
-              currentStreak = 1;
+              counts[dateString]++;
             }
-          } else {
-            currentStreak = 1;
           }
-          bestStreak = Math.max(bestStreak, currentStreak);
-          lastWorkoutDate = workoutDate;
-        } else {
-          counts[dateString]++;
-        }
-      });
+        });
   
       // Calculate weekly streak
       const sortedWeeks = Array.from(weekSet).sort();
