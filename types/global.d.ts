@@ -18,6 +18,7 @@ type WorkoutCalendarProps = {
   workouts: CompletedWorkouts;
   onWeekChange: (start: string, end: string) => void;
   isLoading: boolean;
+  initialDate: Date
 };
 
 type WorkoutDay = { exercises: string[]; cardio: string[] };

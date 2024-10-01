@@ -45,12 +45,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { toZonedTime } from "date-fns-tz";
 
 export default function WorkoutTracker() {
   const [currentUser, setCurrentUser] = useState<"phil" | "eliza">("eliza");
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
-    const today = new Date();
-    return startOfWeek(today, { weekStartsOn: 0 });
+    const dubaiTimezone = "Asia/Dubai";
+    const nowInDubai = toZonedTime(new Date(), dubaiTimezone);
+    return nowInDubai;
+  });
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
+    const dubaiTimezone = "Asia/Dubai";
+    const nowInDubai = toZonedTime(new Date(), dubaiTimezone);
+    return startOfWeek(nowInDubai, { weekStartsOn: 0 });
   });
   const [view, setView] = useState<"log" | "calendar" | "progress" | "stats">(
     "log"
@@ -67,11 +74,6 @@ export default function WorkoutTracker() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [workouts, setWorkouts] = useState<CompletedWorkouts>({});
-
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
-    const today = new Date();
-    return startOfWeek(today, { weekStartsOn: 0 });
-  });
   const [isWorkoutsLoading, setIsWorkoutsLoading] = useState(false);
   const [selectedDaySchedule, setSelectedDaySchedule] = useState<string>("");
   const [deletingWorkoutId, setDeletingWorkoutId] = useState<number | null>(
@@ -100,7 +102,8 @@ export default function WorkoutTracker() {
   }, [getCurrentWorkoutSchedule, selectedDate, selectedDaySchedule]);
 
   const handleWeekChange = useCallback((start: string) => {
-    const newStartDate = new Date(start);
+    const dubaiTimezone = "Asia/Dubai";
+    const newStartDate = toZonedTime(new Date(), dubaiTimezone);
     setSelectedDate(newStartDate);
     setCurrentWeekStart(startOfWeek(newStartDate, { weekStartsOn: 0 }));
   }, []);
@@ -690,6 +693,7 @@ export default function WorkoutTracker() {
             workouts={workouts}
             onWeekChange={handleWeekChange}
             isLoading={isWorkoutsLoading}
+            initialDate={selectedDate}
           />
         ) : view === "progress" ? (
           renderProgressView()

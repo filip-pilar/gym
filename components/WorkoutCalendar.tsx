@@ -1,13 +1,25 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameWeek} from "date-fns";
+import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+  isSameWeek,
+} from "date-fns";
 import { Loader2 } from "lucide-react";
 
-export function WorkoutCalendar({ userId, workouts, onWeekChange, isLoading }: WorkoutCalendarProps) {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+export function WorkoutCalendar({
+  userId,
+  workouts,
+  onWeekChange,
+  isLoading,
+  initialDate,
+}: WorkoutCalendarProps) {
+  const [selectedDate, setSelectedDate] = useState<Date>(initialDate || new Date());
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(
-    startOfWeek(new Date(), { weekStartsOn: 0 })
+    startOfWeek(initialDate || new Date(), { weekStartsOn: 0 })
   );
 
   const organizedWorkouts = useMemo(() => {
@@ -27,21 +39,30 @@ export function WorkoutCalendar({ userId, workouts, onWeekChange, isLoading }: W
     console.log("Organized Workouts:", organizedWorkouts);
   }, [workouts, organizedWorkouts]);
 
-  const handleDateSelect = useCallback((date: Date | undefined) => {
-    if (date) {
-      setSelectedDate(date);
-      const newWeekStart = startOfWeek(date, { weekStartsOn: 0 });
-      
-      if (!isSameWeek(newWeekStart, currentWeekStart, { weekStartsOn: 0 })) {
-        setCurrentWeekStart(newWeekStart);
-        const weekEnd = endOfWeek(date, { weekStartsOn: 0 });
-        onWeekChange(
-          format(newWeekStart, "yyyy-MM-dd"),
-          format(weekEnd, "yyyy-MM-dd")
-        );
-      }
+  useEffect(() => {
+    if (initialDate) {
+      handleDateSelect(initialDate);
     }
-  }, [currentWeekStart, onWeekChange]);
+  }, [initialDate]);
+
+  const handleDateSelect = useCallback(
+    (date: Date | undefined) => {
+      if (date) {
+        setSelectedDate(date);
+        const newWeekStart = startOfWeek(date, { weekStartsOn: 0 });
+
+        if (!isSameWeek(newWeekStart, currentWeekStart, { weekStartsOn: 0 })) {
+          setCurrentWeekStart(newWeekStart);
+          const weekEnd = endOfWeek(date, { weekStartsOn: 0 });
+          onWeekChange(
+            format(newWeekStart, "yyyy-MM-dd"),
+            format(weekEnd, "yyyy-MM-dd")
+          );
+        }
+      }
+    },
+    [currentWeekStart, onWeekChange]
+  );
 
   const renderWorkoutList = () => {
     if (isLoading) {
@@ -106,7 +127,10 @@ export function WorkoutCalendar({ userId, workouts, onWeekChange, isLoading }: W
           <h3 className="font-bold mb-2">
             Week of{" "}
             {format(startOfWeek(selectedDate, { weekStartsOn: 0 }), "MMM d")} -{" "}
-            {format(endOfWeek(selectedDate, { weekStartsOn: 0 }), "MMM d, yyyy")}
+            {format(
+              endOfWeek(selectedDate, { weekStartsOn: 0 }),
+              "MMM d, yyyy"
+            )}
           </h3>
           {renderWorkoutList()}
         </div>
