@@ -102,8 +102,7 @@ export default function WorkoutTracker() {
   }, [getCurrentWorkoutSchedule, selectedDate, selectedDaySchedule]);
 
   const handleWeekChange = useCallback((start: string) => {
-    const dubaiTimezone = "Asia/Dubai";
-    const newStartDate = toZonedTime(new Date(), dubaiTimezone);
+    const newStartDate = new Date(start);
     setSelectedDate(newStartDate);
     setCurrentWeekStart(startOfWeek(newStartDate, { weekStartsOn: 0 }));
   }, []);
