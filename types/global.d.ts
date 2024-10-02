@@ -18,7 +18,7 @@ type WorkoutCalendarProps = {
   workouts: CompletedWorkouts;
   onWeekChange: (start: string, end: string) => void;
   isLoading: boolean;
-  initialDate: Date
+  initialDate: Date;
 };
 
 type WorkoutDay = { exercises: string[]; cardio: string[] };
@@ -80,3 +80,86 @@ interface HeatmapValue {
 interface Date {
   getWeek(): number;
 }
+
+interface NutritionTrackerProps {
+  userId: string;
+}
+
+interface Meal {
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+interface MealPlan {
+  Breakfast: Meal[];
+  Snack: Meal[];
+  Lunch: Meal[];
+  Dinner: Meal[];
+  Treat: Meal[];
+}
+
+interface NutritionGoals {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+interface SelectedMeals {
+  [key in MealSection]?: Meal;
+}
+
+interface NutritionTrackerProps {
+  userId: string;
+}
+
+interface Meal {
+  id?: number;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  adjustable?: boolean;
+}
+
+interface MealWithQuantity {
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  quantity: number;
+  id: number;
+  adjustable: boolean;
+}
+
+type Nutrient = "calories" | "protein" | "carbs" | "fat";
+
+interface NutritionDataPoint {
+  date: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+interface FetchNutritionDataResult {
+  success: boolean;
+  data?: NutritionDataPoint[];
+  message?: string;
+}
+
+interface LoggedMeal {
+    id: number;
+    meal_section: string;
+    meal_name: string;
+    quantity: number;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  }

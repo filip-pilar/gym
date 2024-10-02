@@ -27,53 +27,53 @@ async function ensureTableExists() {
 }
 
 export async function logWorkout(
-    userId: string,
-    date: string,
-    exercise: string,
-    isCardio: boolean,
-    sets: number | null,
-    reps: string | null,
-    weight: number | null,
-    time: number | null,
-    calories: number | null
-  ) {
-    try {
-      await ensureTableExists();
-  
-      // Check if a workout already exists for this user and date
-      const existingWorkout = await sql`
+  userId: string,
+  date: string,
+  exercise: string,
+  isCardio: boolean,
+  sets: number | null,
+  reps: string | null,
+  weight: number | null,
+  time: number | null,
+  calories: number | null
+) {
+  try {
+    await ensureTableExists();
+
+    // Check if a workout already exists for this user and date
+    const existingWorkout = await sql`
         SELECT * FROM workouts
         WHERE user_id = ${userId} AND date = ${date} AND exercise = ${exercise}
       `;
-  
-      if (existingWorkout.rows.length > 0) {
-        return {
-          success: false,
-          message: "Workout already logged for this day",
-          existingWorkout: existingWorkout.rows[0],
-        };
-      }
-  
-      // Insert the new workout and return the ID
-      const result = await sql`
+
+    if (existingWorkout.rows.length > 0) {
+      return {
+        success: false,
+        message: "Workout already logged for this day",
+        existingWorkout: existingWorkout.rows[0],
+      };
+    }
+
+    // Insert the new workout and return the ID
+    const result = await sql`
         INSERT INTO workouts (user_id, date, exercise, is_cardio, sets, reps, weight, time, calories)
         VALUES (${userId}, ${date}, ${exercise}, ${isCardio}, ${sets}, ${reps}, ${weight}, ${time}, ${calories})
         RETURNING id
       `;
-  
-      const newWorkoutId = result.rows[0].id;
-  
-      revalidatePath("/");
-      return { 
-        success: true, 
-        message: "Workout logged successfully",
-        workoutId: newWorkoutId
-      };
-    } catch (error) {
-      console.error("Failed to log workout:", error);
-      return { success: false, message: "Failed to log workout" };
-    }
+
+    const newWorkoutId = result.rows[0].id;
+
+    revalidatePath("/");
+    return {
+      success: true,
+      message: "Workout logged successfully",
+      workoutId: newWorkoutId,
+    };
+  } catch (error) {
+    console.error("Failed to log workout:", error);
+    return { success: false, message: "Failed to log workout" };
   }
+}
 
 export async function overwriteWorkout(
   workoutId: number,
@@ -210,5 +210,203 @@ export async function deleteWorkout(workoutId: number) {
   } catch (error) {
     console.error("Failed to delete workout:", error);
     return { success: false, message: "Failed to delete workout" };
+  }
+}
+
+async function ensureNutritionTableExists() {
+  try {
+    await sql`
+        CREATE TABLE IF NOT EXISTS nutrition_logs (
+          id SERIAL PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          date DATE NOT NULL,
+          meal_section TEXT NOT NULL,
+          meal_name TEXT NOT NULL,
+          calories INTEGER NOT NULL,
+          protein NUMERIC NOT NULL,
+          carbs NUMERIC NOT NULL,
+          fat NUMERIC NOT NULL,
+          quantity INTEGER NOT NULL
+        )
+      `;
+    console.log("Nutrition logs table created or already exists");
+  } catch (error) {
+    console.error("Failed to create nutrition logs table:", error);
+    throw error;
+  }
+}
+
+export async function logNutrition(
+  userId: string,
+  date: string,
+  mealSection: string,
+  mealName: string,
+  calories: number,
+  protein: number,
+  carbs: number,
+  fat: number,
+  quantity: number
+) {
+  try {
+    await ensureNutritionTableExists();
+
+    const result = await sql`
+        INSERT INTO nutrition_logs (user_id, date, meal_section, meal_name, calories, protein, carbs, fat, quantity)
+        VALUES (${userId}, ${date}, ${mealSection}, ${mealName}, ${calories}, ${protein}, ${carbs}, ${fat}, ${quantity})
+        RETURNING id
+      `;
+
+    const newLogId = result.rows[0].id;
+
+    revalidatePath("/");
+    return {
+      success: true,
+      message: "Nutrition logged successfully",
+      logId: newLogId,
+    };
+  } catch (error) {
+    console.error("Failed to log nutrition:", error);
+    return { success: false, message: "Failed to log nutrition" };
+  }
+}
+
+export async function fetchNutritionLogs(
+  userId: string,
+  startDate: string,
+  endDate: string
+) {
+  try {
+    await ensureNutritionTableExists();
+
+    const logs = await sql`
+        SELECT * FROM nutrition_logs
+        WHERE user_id = ${userId}
+          AND date >= ${startDate}
+          AND date <= ${endDate}
+        ORDER BY date ASC, meal_section ASC
+      `;
+
+    return { success: true, logs: logs.rows };
+  } catch (error) {
+    console.error("Failed to fetch nutrition logs:", error);
+    return { success: false, message: "Failed to fetch nutrition logs" };
+  }
+}
+
+export async function deleteNutritionLog(userId: string, logId: number) {
+  try {
+    await ensureNutritionTableExists();
+
+    await sql`
+          DELETE FROM nutrition_logs
+          WHERE id = ${logId} AND user_id = ${userId}
+        `;
+
+    revalidatePath("/");
+    return { success: true, message: "Nutrition log deleted successfully" };
+  } catch (error) {
+    console.error("Failed to delete nutrition log:", error);
+    return { success: false, message: "Failed to delete nutrition log" };
+  }
+}
+
+export async function fetchTotalNutrients(userId: string, date: string) {
+  try {
+    await ensureNutritionTableExists();
+
+    const totals = await sql`
+        SELECT 
+          COALESCE(SUM(calories * quantity), 0) as total_calories,
+          COALESCE(SUM(protein * quantity), 0) as total_protein,
+          COALESCE(SUM(carbs * quantity), 0) as total_carbs,
+          COALESCE(SUM(fat * quantity), 0) as total_fat
+        FROM nutrition_logs
+        WHERE user_id = ${userId} AND date = ${date}
+      `;
+
+    const result = totals.rows[0];
+
+    // Ensure all values are numbers
+    const parsedTotals = {
+      total_calories: parseFloat(result.total_calories) || 0,
+      total_protein: parseFloat(result.total_protein) || 0,
+      total_carbs: parseFloat(result.total_carbs) || 0,
+      total_fat: parseFloat(result.total_fat) || 0,
+    };
+
+    return {
+      success: true,
+      totals: parsedTotals,
+    };
+  } catch (error) {
+    console.error("Failed to fetch total nutrients:", error);
+    return {
+      success: false,
+      message: "Failed to fetch total nutrients",
+      totals: {
+        total_calories: 0,
+        total_protein: 0,
+        total_carbs: 0,
+        total_fat: 0,
+      },
+    };
+  }
+}
+
+export async function fetchNutritionData(
+  userId: string,
+  date: Date,
+  viewMode: "week" | "month"
+): Promise<{
+  success: boolean;
+  data?: NutritionDataPoint[];
+  message?: string;
+}> {
+  try {
+    const startDate = new Date(date);
+    const endDate = new Date(date);
+
+    if (viewMode === "week") {
+      startDate.setDate(startDate.getDate() - startDate.getDay());
+      endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+    } else {
+      startDate.setDate(1);
+      endDate.setMonth(endDate.getMonth() + 1);
+      endDate.setDate(0);
+    }
+
+    const result = await sql`
+        SELECT 
+          date,
+          SUM(calories * quantity) as calories,
+          SUM(protein * quantity) as protein,
+          SUM(carbs * quantity) as carbs,
+          SUM(fat * quantity) as fat
+        FROM nutrition_logs
+        WHERE user_id = ${userId}
+          AND date >= ${startDate.toISOString().split("T")[0]}
+          AND date <= ${endDate.toISOString().split("T")[0]}
+        GROUP BY date
+        ORDER BY date ASC
+      `;
+
+    const data: NutritionDataPoint[] = result.rows.map((row) => ({
+      date: row.date.toISOString(),
+      calories: parseFloat(row.calories) || 0,
+      protein: parseFloat(row.protein) || 0,
+      carbs: parseFloat(row.carbs) || 0,
+      fat: parseFloat(row.fat) || 0,
+    }));
+
+    return {
+      success: true,
+      data,
+    };
+  } catch (error) {
+    console.error("Error fetching nutrition data:", error);
+    return {
+      success: false,
+      message: "An error occurred while fetching nutrition data",
+    };
   }
 }

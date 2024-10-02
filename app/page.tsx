@@ -46,6 +46,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toZonedTime } from "date-fns-tz";
+import NutritionTracker from "@/components/NutritionTracker";
 
 export default function WorkoutTracker() {
   const [currentUser, setCurrentUser] = useState<"phil" | "eliza">("eliza");
@@ -59,9 +60,9 @@ export default function WorkoutTracker() {
     const nowInDubai = toZonedTime(new Date(), dubaiTimezone);
     return startOfWeek(nowInDubai, { weekStartsOn: 0 });
   });
-  const [view, setView] = useState<"log" | "calendar" | "progress" | "stats">(
-    "log"
-  );
+  const [view, setView] = useState<
+    "log" | "calendar" | "progress" | "stats" | "food"
+  >("log");
   const [selectedExercise, setSelectedExercise] = useState("");
   const [isCardio, setIsCardio] = useState(false);
   const [selectedSets, setSelectedSets] = useState<3 | 4 | null>(null);
@@ -652,14 +653,14 @@ export default function WorkoutTracker() {
             variant={view === "log" ? "default" : "outline"}
             className="mr-2"
           >
-            Log Workout
+            Log
           </Button>
           <Button
             onClick={() => setView("calendar")}
             variant={view === "calendar" ? "default" : "outline"}
             className="mr-2"
           >
-            Calendar View
+            Calendar
           </Button>
           <Button
             onClick={() => setView("progress")}
@@ -671,8 +672,15 @@ export default function WorkoutTracker() {
           <Button
             onClick={() => setView("stats")}
             variant={view === "stats" ? "default" : "outline"}
+            className="mr-2"
           >
             Stats
+          </Button>
+          <Button
+            onClick={() => setView("food")}
+            variant={view === "food" ? "default" : "outline"}
+          >
+            Food
           </Button>
         </div>
         {view === "log" ? (
@@ -698,6 +706,8 @@ export default function WorkoutTracker() {
           renderProgressView()
         ) : view === "stats" ? (
           <WorkoutHeatmap userId={currentUser} />
+        ) : view === "food" ? (
+          <NutritionTracker  userId={currentUser} />
         ) : null}
       </Tabs>
     </div>
