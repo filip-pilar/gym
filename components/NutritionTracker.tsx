@@ -29,6 +29,8 @@ import {
   deleteNutritionLog,
   fetchTotalNutrients,
 } from "@/lib/actions";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
 const MEAL_SECTIONS = [
   "Breakfast",
@@ -36,6 +38,7 @@ const MEAL_SECTIONS = [
   "Lunch",
   "Dinner",
   "Treat",
+  "Custom",
 ] as const;
 type MealSection = (typeof MEAL_SECTIONS)[number];
 
@@ -50,6 +53,7 @@ const NutritionTracker: React.FC<{ userId: "phil" | "eliza" }> = ({
     Lunch: null,
     Dinner: null,
     Treat: null,
+    Custom: null,
   });
 
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -66,6 +70,15 @@ const NutritionTracker: React.FC<{ userId: "phil" | "eliza" }> = ({
   const { toast } = useToast();
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [deletingMealId, setDeletingMealId] = useState<number | null>(null);
+  const [customMeal, setCustomMeal] = useState<MealWithQuantity>({
+    name: "",
+    calories: 0,
+    protein: 0,
+    carbs: 0,
+    fat: 0,
+    quantity: 1,
+    id: -1,
+  });
 
   const userNutrientGoals = nutrientGoals[userId];
   const userMealPlan = mealPlans[userId];
@@ -91,17 +104,16 @@ const NutritionTracker: React.FC<{ userId: "phil" | "eliza" }> = ({
     await fetchSelectedMeals(currentDate);
     await fetchDailyTotals();
     setIsInitialLoading(false);
-  }, [currentDate, userId]); // Add userId as a dependency
+  }, [currentDate, userId]);
 
   useEffect(() => {
     loadInitialData();
-  }, [loadInitialData, userId]); // Add userId as a dependency
+  }, [loadInitialData, userId]);
 
   useEffect(() => {
     setTotalNutrients(calculateTotalNutrients());
   }, [selectedMeals, calculateTotalNutrients]);
 
-  // New useEffect to handle user changes
   useEffect(() => {
     setSelectedMeals({
       Breakfast: null,
@@ -109,6 +121,7 @@ const NutritionTracker: React.FC<{ userId: "phil" | "eliza" }> = ({
       Lunch: null,
       Dinner: null,
       Treat: null,
+      Custom: null,
     });
     loadInitialData();
   }, [userId, loadInitialData]);
@@ -140,6 +153,7 @@ const NutritionTracker: React.FC<{ userId: "phil" | "eliza" }> = ({
       Lunch: null,
       Dinner: null,
       Treat: null,
+      Custom: null,
     };
 
     if (result.success && result.logs) {
@@ -170,7 +184,6 @@ const NutritionTracker: React.FC<{ userId: "phil" | "eliza" }> = ({
             fat: log.fat,
             quantity: log.quantity,
             id: log.id,
-            adjustable: true,
           };
         }
       });
@@ -283,6 +296,64 @@ const NutritionTracker: React.FC<{ userId: "phil" | "eliza" }> = ({
     }
     setIsLoading(false);
     setDeletingMealId(null);
+  };customMeal
+
+  const handleCustomMealChange = (field: keyof MealWithQuantity, value: string | number) => {
+    setCustomMeal(prevMeal => {
+      const newMeal = { ...prevMeal, [field]: value };
+      return newMeal;
+    });
+  };
+
+  const logCustomMeal = async () => {
+    if (!customMeal.name || customMeal.calories === 0) {
+      toast({
+        title: "Invalid Custom Meal",
+        description: "Please provide a name and calories for the custom meal.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    const formattedDate = currentDate.toISOString().split("T")[0];
+    const result = await logNutrition(
+      userId,
+      formattedDate,
+      "Custom",
+      customMeal.name,
+      customMeal.calories,
+      customMeal.protein,
+      customMeal.carbs,
+      customMeal.fat,
+      customMeal.quantity
+    );
+
+    if (result.success) {
+      toast({
+        title: "Custom Meal Logged Successfully",
+        description: `${customMeal.name} (Quantity: ${customMeal.quantity}) logged as Custom meal`,
+        variant: "success",
+      });
+      fetchSelectedMeals(currentDate);
+      fetchDailyTotals();
+      setCustomMeal({
+        name: "",
+        calories: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+        quantity: 1,
+        id: -1,
+      });
+    } else {
+      toast({
+        title: "Failed to Log Custom Meal",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+    setIsLoading(false);
   };
 
   const renderProgressBar = (
@@ -474,6 +545,108 @@ const NutritionTracker: React.FC<{ userId: "phil" | "eliza" }> = ({
     </Button>
   );
 
+  const renderCustomMealForm = () => (
+    <div className="space-y-4 px-2">
+      <div className="space-y-2">
+        <Label htmlFor="meal-name">Meal Name</Label>
+        <Input
+          id="meal-name"
+          placeholder="Enter meal name"
+          value={customMeal.name}
+          onChange={(e) => handleCustomMealChange("name", e.target.value)}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="calories">Calories</Label>
+          <Input
+            id="calories"
+            type="number"
+            placeholder="e.g., 500"
+            value={customMeal.calories}
+            onChange={(e) => handleCustomMealChange("calories", e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="protein">Protein (g)</Label>
+          <Input
+            id="protein"
+            type="number"
+            placeholder="e.g., 20"
+            value={customMeal.protein}
+            onChange={(e) => handleCustomMealChange("protein", e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="carbs">Carbs (g)</Label>
+          <Input
+            id="carbs"
+            type="number"
+            placeholder="e.g., 50"
+            value={customMeal.carbs}
+            onChange={(e) => handleCustomMealChange("carbs", e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="fat">Fat (g)</Label>
+          <Input
+            id="fat"
+            type="number"
+            placeholder="e.g., 15"
+            value={customMeal.fat}
+            onChange={(e) => handleCustomMealChange("fat", e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              handleCustomMealChange(
+                "quantity",
+                Math.max(1, customMeal.quantity - 1)
+              )
+            }
+            disabled={customMeal.quantity <= 1}
+          >
+            -
+          </Button>
+          <span>{customMeal.quantity}</span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              handleCustomMealChange("quantity", customMeal.quantity + 1)
+            }
+          >
+            +
+          </Button>
+        </div>
+      </div>
+
+        <Card className="p-4">
+          <h4 className="font-semibold mb-2">Total Nutrition:</h4>
+          <p className="text-sm">
+            {(customMeal.calories * customMeal.quantity).toFixed(0)} cal,{" "}
+            {(customMeal.protein * customMeal.quantity).toFixed(0)}p,{" "}
+            {(customMeal.carbs * customMeal.quantity).toFixed(0)}c,{" "}
+            {(customMeal.fat * customMeal.quantity).toFixed(0)}f
+          </p>
+        </Card>
+  
+
+      <Button
+        className="w-full"
+        onClick={logCustomMeal}
+        disabled={isLoading || !customMeal.name || customMeal.calories === 0}
+      >
+        {isLoading ? "Logging..." : "Log Custom Meal"}
+      </Button>
+    </div>
+  );
+
   return (
     <>
       <Card className="w-full max-w-2xl mx-auto">
@@ -523,12 +696,18 @@ const NutritionTracker: React.FC<{ userId: "phil" | "eliza" }> = ({
               <AccordionItem value={section} key={section}>
                 <AccordionTrigger>{section}</AccordionTrigger>
                 <AccordionContent>
-                  <div className="grid grid-cols-2 gap-2">
-                    {userMealPlan[section].map((meal, index) =>
-                      renderMealCard(section, meal, index)
-                    )}
-                  </div>
-                  {renderMealButtons(section)}
+                  {section === "Custom" ? (
+                    renderCustomMealForm()
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-2">
+                        {userMealPlan[section].map((meal, index) =>
+                          renderMealCard(section, meal, index)
+                        )}
+                      </div>
+                      {renderMealButtons(section)}
+                    </>
+                  )}
                 </AccordionContent>
               </AccordionItem>
             ))}

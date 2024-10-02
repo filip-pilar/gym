@@ -123,7 +123,6 @@ interface Meal {
   protein: number;
   carbs: number;
   fat: number;
-  adjustable?: boolean;
 }
 
 interface MealWithQuantity {
@@ -134,7 +133,7 @@ interface MealWithQuantity {
   fat: number;
   quantity: number;
   id: number;
-  adjustable: boolean;
+
 }
 
 type Nutrient = "calories" | "protein" | "carbs" | "fat";
