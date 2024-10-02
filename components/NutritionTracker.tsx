@@ -296,7 +296,7 @@ const NutritionTracker: React.FC<{ userId: "phil" | "eliza" }> = ({
     }
     setIsLoading(false);
     setDeletingMealId(null);
-  };customMeal
+  };
 
   const handleCustomMealChange = (field: keyof MealWithQuantity, value: string | number) => {
     setCustomMeal(prevMeal => {
