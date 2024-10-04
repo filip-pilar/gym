@@ -125,9 +125,9 @@ export const elizaWorkoutSchedule = [
   },
   {
     day: "Day 4 (Wednesday)",
-    type: "cardio",
-    exercises: ["Abs"],
-    cardio: ["Cardio"],
+    type: "Rest",
+    exercises: [],
+    cardio: [],
   },
   {
     day: "Day 5 (Thursday)",
@@ -157,7 +157,7 @@ export const elizaWorkoutSchedule = [
   },
   {
     day: "Day 7 (Saturday)",
-    type: "rest",
+    type: "Rest",
     exercises: [],
     cardio: [],
   },
