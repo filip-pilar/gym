@@ -49,7 +49,7 @@ import { toZonedTime } from "date-fns-tz";
 import NutritionTracker from "@/components/NutritionTracker";
 
 export default function WorkoutTracker() {
-  const [currentUser, setCurrentUser] = useState<"phil" | "eliza">("eliza");
+  const [currentUser, setCurrentUser] = useState<"phil" | "eliza">("phil");
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     const dubaiTimezone = "Asia/Dubai";
     const nowInDubai = toZonedTime(new Date(), dubaiTimezone);
