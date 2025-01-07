@@ -641,7 +641,7 @@ export default function WorkoutTracker() {
       <h1 className="text-3xl font-bold mb-6">Progress Tracker</h1>
       <Tabs
         defaultValue="phil"
-        onValueChange={(value) => setCurrentUser(value as "phil" | "eliza")}
+        onValueChange={(value) => setCurrentUser(value as "phil")}
       >
         <TabsList className="mb-4">
           <TabsTrigger value="phil">Phil</TabsTrigger>
