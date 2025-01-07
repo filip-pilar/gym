@@ -49,7 +49,7 @@ import { toZonedTime } from "date-fns-tz";
 import NutritionTracker from "@/components/NutritionTracker";
 
 export default function WorkoutTracker() {
-  const [currentUser, setCurrentUser] = useState<"phil" | "eliza">("phil");
+  const [currentUser, setCurrentUser] = useState<"phil" >("phil");
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     const dubaiTimezone = "Asia/Dubai";
     const nowInDubai = toZonedTime(new Date(), dubaiTimezone);
@@ -640,12 +640,11 @@ export default function WorkoutTracker() {
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Progress Tracker</h1>
       <Tabs
-        defaultValue="eliza"
+        defaultValue="phil"
         onValueChange={(value) => setCurrentUser(value as "phil" | "eliza")}
       >
         <TabsList className="mb-4">
           <TabsTrigger value="phil">Phil</TabsTrigger>
-          <TabsTrigger value="eliza">Eliza</TabsTrigger>
         </TabsList>
         <div className="mb-4">
           <Button
